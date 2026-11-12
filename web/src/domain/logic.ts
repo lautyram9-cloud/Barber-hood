@@ -160,3 +160,98 @@ export function aCsv(rows: unknown[][]) {
     }).join(';'))
     .join('\n');
 }
+
+// ---------- Estadísticas (V.est / est8 / bcard) ----------
+/** Rango del período anterior al que contiene ref (prevR). */
+export function rangoAnterior(p: Periodo, ref: string): [string, string] {
+  const x = new Date(ref + 'T00:00:00');
+  if (p == 'dia') x.setDate(x.getDate() - 1);
+  else if (p == 'sem') x.setDate(x.getDate() - 7);
+  else if (p == 'mes') x.setMonth(x.getMonth() - 1);
+  else x.setFullYear(x.getFullYear() - 1);
+  return rango(p, isoLocal(x));
+}
+
+const ingresosEn = (d: AppData, a: string, b: string) => d.movs.filter((m) => m.tipo == 'ing' && m.fecha >= a && m.fecha <= b);
+
+export interface ServicioStats { nombre: string; cantidad: number; ingresos: number; comisiones: number; margen: number; margenPct: number }
+/** Servicios vendidos en [a, b] agrupados por concepto, ordenados por cantidad. */
+function serviciosAgrupados(d: AppData, a: string, b: string): ServicioStats[] {
+  const g: Record<string, { n: number; i: number; c: number }> = {};
+  ingresosEn(d, a, b).filter((m) => m.categoria == 'servicio').forEach((m) => {
+    const x = (g[m.concepto] ??= { n: 0, i: 0, c: 0 }); x.n++; x.i += +m.monto || 0; x.c += +(m.comisionMonto as number) || 0;
+  });
+  return Object.entries(g).map(([nombre, x]) => ({ nombre, cantidad: x.n, ingresos: x.i, comisiones: x.c, margen: x.i - x.c, margenPct: x.i ? Math.round(((x.i - x.c) / x.i) * 100) : 0 }));
+}
+/** Servicios vendidos en [a, b] agrupados por concepto, del más vendido al menos vendido. */
+export const serviciosVendidos = (d: AppData, a: string, b: string) => serviciosAgrupados(d, a, b).sort((x, y) => y.cantidad - x.cantidad);
+/** Los 5 servicios con mayor margen (ingresos − comisiones) en [a, b]. */
+export const serviciosMayorMargen = (d: AppData, a: string, b: string) => serviciosAgrupados(d, a, b).sort((x, y) => y.margen - x.margen).slice(0, 5);
+
+/** Clientes (por nombre cargado en el ingreso) nuevos y recurrentes en [a, b]. */
+export function clientesNuevosRecurrentes(d: AppData, a: string, b: string) {
+  const cl = ingresosEn(d, a, b).filter((m) => m.categoria == 'servicio' && m.cliente);
+  const seen = new Set(d.movs.filter((m) => m.tipo == 'ing' && m.cliente && m.fecha < a).map((m) => (m.cliente as string).toLowerCase()));
+  const pc = [...new Set(cl.map((m) => (m.cliente as string).toLowerCase()))];
+  const rec = pc.filter((c) => seen.has(c) || cl.filter((m) => (m.cliente as string).toLowerCase() == c).length > 1).length;
+  return { nuevos: pc.length - rec, recurrentes: rec };
+}
+
+/** Cantidad de turnos por hora de inicio en [a, b], horas ordenadas. */
+export function demandaPorHora(d: AppData, a: string, b: string): [hora: string, turnos: number][] {
+  const hh: Record<string, number> = {};
+  d.turnos.filter((t) => t.fecha >= a && t.fecha <= b).forEach((t) => { const k = t.hora.slice(0, 2); hh[k] = (hh[k] || 0) + 1; });
+  return Object.keys(hh).sort().map((k) => [k, hh[k]]);
+}
+
+export const comisionesPagadas = (d: AppData, a: string, b: string) => sumMonto(d.liquidaciones.filter((x) => x.fecha >= a && x.fecha <= b));
+export const gastosTotales = (r: Resultado) => r.gastosFijos + r.gastosVariables + r.comisiones + r.costoProductos + r.perdidas;
+export const rentabilidad = (r: Resultado) => (r.ingresos ? Math.round((r.neto / r.ingresos) * 100) : 0);
+/** Variación porcentual como la muestra la versión estable (▲/▼ n% o —). */
+export const variacion = (x: number, y: number) => (y ? `${x >= y ? '▲' : '▼'} ${Math.abs(Math.round(((x - y) / y) * 100))}%` : '—');
+/** Puntualidad y asistencia en % (null si no hay registros). */
+export const asistenciaPct = (s: StatsBarbero) => ({
+  puntualidad: s.asistencias ? Math.round((s.puntual / s.asistencias) * 100) : null,
+  asistencia: s.asistencias ? Math.round(((s.puntual + s.tarde) / s.asistencias) * 100) : null,
+});
+export const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+export const nombreMes = (ym: string) => MESES[+ym.slice(5) - 1];
+
+// ---------- Clientes (cst) ----------
+export function statsCliente(d: AppData, c: AppData['clientes'][number]) {
+  const M = d.movs.filter((m) => m.tipo == 'ing' && m.clienteId == c.id), sv = M.filter((m) => m.categoria == 'servicio');
+  const vis = [...new Set(sv.map((m) => m.fecha))].sort(), last = vis[vis.length - 1] || '';
+  return {
+    cliente: c, movs: M, total: sumMonto(M), visitas: vis.length, ultima: last,
+    dias: last ? Math.floor((Date.now() - Date.parse(last + 'T00:00:00')) / 864e5) : null,
+    frecuencia: vis.length > 1 ? Math.round((Date.parse(last) - Date.parse(vis[0])) / 864e5 / (vis.length - 1)) : null,
+  };
+}
+
+// ---------- Exportación CSV (A.csv) ----------
+const tabla = (h: string[], filas: unknown[][]): unknown[][] => [h, ...filas];
+export type CsvTipo = 'mov' | 'liq' | 'tur' | 'cli' | 'stk';
+export function csvExport(d: AppData, tipo: CsvTipo, a: string, b: string): { nombre: string; filas: unknown[][] } {
+  const bn = (id?: string) => nombreBarbero(d, id);
+  let R: unknown[][];
+  if (tipo == 'mov')
+    R = tabla(['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Barbero', 'Cliente', 'Cantidad', 'Monto', 'Comisión', 'Costo unitario', 'Medio de pago', 'Cobrado', 'Liquidado'], 
+      d.movs.filter((x) => (x.fecha || '') >= a && (x.fecha || '') <= b).sort((x, y) => x.fecha.localeCompare(y.fecha)).map((m) => [
+        m.fecha, m.tipo == 'ing' ? 'Ingreso' : 'Gasto', m.categoria, m.concepto, bn(m.barberoId), m.cliente || '', m.cantidad || '', m.monto, m.comisionMonto || 0,
+        m.costoUnit || 0, m.medioPago || '', m.tipo == 'ing' ? (m.cobrado ? 'Sí' : 'No') : '', m.liquidacionId ? 'Sí' : 'No']));
+  else if (tipo == 'liq')
+    R = tabla(['Fecha', 'Barbero', 'Desde', 'Hasta', 'Comisiones', 'Adelantos', 'Pagado', 'Medio'], 
+      d.liquidaciones.filter((x) => x.fecha >= a && x.fecha <= b).map((x) => [x.fecha, bn(x.barberoId), x.desde || '', x.hasta || '', x.bruto, x.bruto - x.monto, x.monto, x.medioPago || '']));
+  else if (tipo == 'tur')
+    R = tabla(['Fecha', 'Hora', 'Cliente', 'Teléfono', 'Barbero', 'Servicios', 'Duración (min)', 'Estado', 'Notas'], 
+      d.turnos.concat(d.turnosBaja).filter((t) => t.fecha >= a && t.fecha <= b).sort((x, y) => (x.fecha + x.hora).localeCompare(y.fecha + y.hora))
+        .map((t) => [t.fecha, t.hora, t.cliente, t.telefono, bn(t.barberoId), t.servicios, t.duracionMin, t.estado, t.notas]));
+  else if (tipo == 'cli')
+    R = tabla(['Nombre', 'Teléfono', 'Visitas', 'Total gastado', 'Última visita', 'Días sin venir', 'Preferencias', 'Observaciones'], 
+      d.clientes.map((c) => statsCliente(d, c)).map((s) => [s.cliente.nombre, s.cliente.telefono, s.visitas, s.total, s.ultima, s.dias == null ? '' : s.dias, s.cliente.preferencias, s.cliente.observaciones]));
+  else
+    R = tabla(['Producto', 'Categoría', 'Proveedor', 'Costo', 'Precio', 'Margen %', 'Stock', 'Mínimo', 'Valor a costo'], 
+      d.productos.map((p) => [p.nombre, p.categoria || '', d.proveedores.find((x) => x.id == p.proveedorId)?.nombre || '', p.costo, p.precio,
+        p.precio ? Math.round(((p.precio - p.costo) / p.precio) * 100) : 0, p.stock, p.stockMin || 0, p.stock * p.costo]));
+  return { nombre: 'barberhood-' + tipo + '-' + a + '_' + b + '.csv', filas: R };
+}

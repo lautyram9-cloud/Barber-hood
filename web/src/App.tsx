@@ -5,6 +5,9 @@ import { Button } from '@/components/ui';
 import { LEGACY_APP_URL } from '@/config';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { InicioPage } from '@/features/inicio/InicioPage';
+import { EstadisticasPage } from '@/features/estadisticas/EstadisticasPage';
+import { BarberosPage } from '@/features/barberos/BarberosPage';
+import { MiPerfilPage } from '@/features/perfil/MiPerfilPage';
 import { ModuloPendiente } from '@/features/pendiente/ModuloPendiente';
 import { Loading, Problem, Retry } from '@/features/StatusScreens';
 import { useHashRoute } from '@/lib/router';
@@ -28,12 +31,12 @@ export function App() {
   if (session.status === 'error') return <Problem title="No se pudo conectar" actions={<Retry onClick={() => location.reload()} />}>{session.message}</Problem>;
   if (session.status === 'noBarbero')
     return <Problem title="Usuario sin barbero" actions={<Button variant="outline" onClick={signOut}>Cerrar sesión</Button>}>Pedile al dueño que vincule tu email ({session.email}) a tu perfil de barbero en Ajustes.</Problem>;
-  return <Authed owner={session.owner} isBarber={!!session.meBarberoId} email={session.email} onSignOut={signOut} />;
+  return <Authed owner={session.owner} me={session.meBarberoId} email={session.email} onSignOut={signOut} />;
 }
 
-function Authed({ owner, isBarber, email, onSignOut }: { owner: boolean; isBarber: boolean; email: string; onSignOut(): void }) {
+function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | null; email: string; onSignOut(): void }) {
   const [route, navigate] = useHashRoute();
-  const sections = sectionsFor(owner, isBarber);
+  const sections = sectionsFor(owner, !!me);
   const current = sections.find((s) => s.id === route) ?? sections[0];
   const { data, error, loading, refetch } = useAppData(owner);
 
@@ -43,6 +46,9 @@ function Authed({ owner, isBarber, email, onSignOut }: { owner: boolean; isBarbe
   if (error && !data) body = <Problem title="No se pudieron cargar los datos" actions={<Retry onClick={refetch} />}>{error.tabla ? `Error en la tabla "${error.tabla}": ` : ''}{String(error.message).slice(0, 120)}</Problem>;
   else if (loading || !data) body = <Loading label="Cargando datos…" />;
   else if (current.id === 'ini') body = <InicioPage d={data} />;
+  else if (current.id === 'est') body = <EstadisticasPage d={data} />;
+  else if (current.id === 'bar') body = <BarberosPage d={data} />;
+  else if (current.id === 'me' && me) body = <MiPerfilPage d={data} me={me} />;
   else body = <ModuloPendiente nombre={current.label} />;
 
   return (

@@ -18,6 +18,12 @@ test('capturas', async ({ page }, info) => {
   await page.getByRole('heading', { name: 'Inicio', level: 1 }).waitFor();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/${info.project.name}-2-inicio.png`, fullPage: true });
+  for (const r of ['est', 'bar']) {
+    await page.goto('#/' + r);
+    await page.locator('main h1').first().waitFor();
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: `${OUT}/${info.project.name}-4-${r}.png`, fullPage: true });
+  }
   await page.goto('#/stk');
   await page.getByRole('heading', { name: 'Stock' }).waitFor();
   await page.screenshot({ path: `${OUT}/${info.project.name}-3-pendiente.png` });

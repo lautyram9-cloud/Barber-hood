@@ -8,10 +8,12 @@ export const SB = 'https://gbrutjlhdcnnlghoaxlu.supabase.co';
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
 export interface MockUser { id: string; email: string; rol: 'owner' | 'barber' | null; barberoId?: string | null }
-export interface MockLog { tables: string[]; rpcs: string[]; writes: string[]; external: string[] }
+export interface MockLog { tables: string[]; rpcs: string[]; writes: string[]; external: string[]; bodies: { op: string; body: unknown }[] }
+/** Escrituras permitidas en una prueba, p. ej. 'POST asistencia' o 'rpc marcar_asistencia' (con su respuesta). */
+export type Permitidas = Record<string, unknown>;
 
-export async function mockSupabase(page: Page, tables: RawTables, user: MockUser, now: number): Promise<MockLog> {
-  const log: MockLog = { tables: [], rpcs: [], writes: [], external: [] };
+export async function mockSupabase(page: Page, tables: RawTables, user: MockUser, now: number, permitidas: Permitidas = {}): Promise<MockLog> {
+  const log: MockLog = { tables: [], rpcs: [], writes: [], external: [], bodies: [] };
   const exp = Math.floor(now / 1000) + 3600;
   const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: user.id, email: user.email, role: 'authenticated', aud: 'authenticated', exp })}.firma-de-prueba`;
   const authUser = { id: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
@@ -36,12 +38,17 @@ export async function mockSupabase(page: Page, tables: RawTables, user: MockUser
     if (u.pathname === '/auth/v1/logout') return { status: 204, body: {} };
     if (u.pathname.startsWith('/rest/v1/rpc/')) {
       const fn = u.pathname.slice(13); log.rpcs.push(fn);
+      if (`rpc ${fn}` in permitidas) { log.bodies.push({ op: `rpc ${fn}`, body: req.postDataJSON() }); return { status: 200, body: permitidas[`rpc ${fn}`] }; }
       if (fn === 'caja_resumen') return { status: 200, body: { inicial: 10000, esperado: 34567, pendiente_cobro: 0, ing_efectivo: 0, mov_in: 0, gastos_efectivo: 0, liquidaciones: 0, adelantos: 0, mov_out: 0, ing_transferencia: 0, ing_tarjeta: 0 } };
       return { status: 403, body: { message: 'RPC no permitida en pruebas: ' + fn } };
     }
     if (u.pathname.startsWith('/rest/v1/')) {
       const t = u.pathname.slice(9);
-      if (m !== 'GET' && m !== 'HEAD') { log.writes.push(`${m} ${t}`); return { status: 403, body: { message: 'Escrituras bloqueadas en pruebas' } }; }
+      if (m !== 'GET' && m !== 'HEAD') {
+        log.writes.push(`${m} ${t}`);
+        if (`${m} ${t}` in permitidas) { log.bodies.push({ op: `${m} ${t}`, body: req.postDataJSON() }); return { status: 201, body: permitidas[`${m} ${t}`] }; }
+        return { status: 403, body: { message: 'Escrituras bloqueadas en pruebas' } };
+      }
       log.tables.push(t);
       if (t === 'perfiles') return { status: 200, body: user.rol ? [{ rol: user.rol }] : [] };
       if (t === 'barberos' && u.searchParams.get('user_id')) return { status: 200, body: user.barberoId ? [{ id: user.barberoId }] : [] };
