@@ -12,6 +12,7 @@ import { TurnosPage } from '@/features/turnos/TurnosPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { MovimientosPage } from '@/features/movimientos/MovimientosPage';
 import { CajaPage } from '@/features/caja/CajaPage';
+import { ComisionesPage } from '@/features/comisiones/ComisionesPage';
 import { BotonMas } from '@/features/movimientos/BotonMas';
 import { SECCIONES_CON_BOTON } from '@/domain/movimientos';
 import { ModuloPendiente } from '@/features/pendiente/ModuloPendiente';
@@ -54,6 +55,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   else if (current.id === 'ini') body = <InicioPage d={data} />;
   else if (current.id === 'tur') body = <TurnosPage d={data} owner={owner} me={me} />;
   else if (current.id === 'cli') body = <ClientesPage d={data} />;
+  else if (current.id === 'com') body = <ComisionesPage d={data} />;
   else if (current.id === 'cj') body = <CajaPage d={data} />;
   else if (current.id === 'caja') body = <MovimientosPage d={data} />;
   else if (current.id === 'est') body = <EstadisticasPage d={data} />;
