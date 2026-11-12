@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+/* Sistema de diseño Barber Hood: oscuro, minimalista, acento azul eléctrico de la marca. */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-bg: #07090d;
+  --color-surface: #0d1016;
+  --color-surface-2: #131821;
+  --color-line: #1d2430;
+  --color-line-strong: #2a3342;
+  --color-fg: #eef1f6;
+  --color-muted: #8a94a6;
+  --color-subtle: #5b6576;
+  --color-accent: #2f8cff;
+  --color-accent-strong: #1667ff;
+  --color-ok: #34d399;
+  --color-ko: #f87171;
+  --color-warn: #fbbf24;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; background: var(--color-bg); color-scheme: dark; }
+  body { margin: 0; min-height: 100dvh; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; touch-action: manipulation; }
+  * { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  /* iOS no hace zoom en inputs de 16px */
+  input, select, textarea { font-size: 16px; }
+}
+
+@utility num { font-variant-numeric: tabular-nums; }
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
