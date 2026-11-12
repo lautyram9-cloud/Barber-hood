@@ -28,13 +28,23 @@ export interface Legacy {
   run<T = unknown>(code: string): T;
   /** Igual que run, pero normaliza a JSON (independiza de los objetos del otro contexto). */
   json<T = unknown>(code: string): T;
+  /** Pone un valor del lado de Node accesible desde el código legacy (p. ej. __dom, __rec). */
+  set(nombre: string, valor: unknown): void;
 }
 
 export async function loadLegacy(tables: RawTables, opts: { now: number; owner: boolean; meBarberoId?: string }): Promise<Legacy> {
+  const els = new Map<string, Record<string, unknown>>();
+  const byId = (id: string) => {
+    if (!els.has(id)) els.set(id, el());
+    const e = els.get(id)!, dom = (ctx.__dom ?? {}) as Record<string, string>;
+    if (id in dom) e.value = dom[id];
+    return e;
+  };
   const ctx: Record<string, unknown> = {
     console,
     document: {
-      querySelector: () => el(), querySelectorAll: () => [], getElementById: () => el(), createElement: () => el(),
+      // Elementos persistentes por id; el valor de los campos sale de __dom (formularios simulados).
+      querySelector: (q: string) => byId(q.replace(/^#/, '')), querySelectorAll: () => [], getElementById: (id: string) => byId(id), createElement: () => el(),
       addEventListener() {}, activeElement: null, body: el(),
     },
     navigator: { onLine: true },
@@ -60,11 +70,11 @@ export async function loadLegacy(tables: RawTables, opts: { now: number; owner: 
     S.owner = ${opts.owner}; S.admin = ${opts.owner}; S.me = ${opts.meBarberoId ? JSON.stringify(opts.meBarberoId) : 'null'}; S.db = {};
   `, ctx);
   let toast = '';
-  ctx.__toast = (m: string) => (toast = m);
+  ctx.__toast = (m: string) => { toast = m; ctx.__lastToast = m; };
   vm.runInContext(`toast = (m) => __toast(m)`, ctx); // toast es function: se puede reasignar
   await vm.runInContext('load()', ctx);
   if (toast.startsWith('Error')) throw new Error('La versión estable falló al cargar los datos de prueba: ' + toast);
 
   const run = <T,>(code: string) => vm.runInContext(code, ctx) as T;
-  return { run, json: <T,>(code: string) => JSON.parse(JSON.stringify(run(code)) ?? 'null') as T };
+  return { run, json: <T,>(code: string) => JSON.parse(JSON.stringify(run(code)) ?? 'null') as T, set: (k, v) => { ctx[k] = v; } };
 }

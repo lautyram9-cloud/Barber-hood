@@ -60,14 +60,17 @@ export function useAccion() {
   const { toast } = useFeedback();
   const qc = useQueryClient();
   const [ocupado, setOcupado] = useState(false);
-  const run = useCallback(async (fn: () => Promise<string | void>, tablas: TableName[]) => {
-    if (ocupado) return;
+  /** Devuelve true si salió bien. */
+  const run = useCallback(async (fn: () => Promise<string | void>, tablas: TableName[]): Promise<boolean> => {
+    if (ocupado) return false;
     setOcupado(true);
     try {
       const ok = await fn();
       if (ok) toast(ok);
+      return true;
     } catch (e) {
       toast(mensajeError(e));
+      return false;
     } finally {
       setOcupado(false);
       tablas.forEach((t) => qc.invalidateQueries({ queryKey: tableKey(t) }));

@@ -8,6 +8,7 @@ import { InicioPage } from '@/features/inicio/InicioPage';
 import { EstadisticasPage } from '@/features/estadisticas/EstadisticasPage';
 import { BarberosPage } from '@/features/barberos/BarberosPage';
 import { MiPerfilPage } from '@/features/perfil/MiPerfilPage';
+import { TurnosPage } from '@/features/turnos/TurnosPage';
 import { ModuloPendiente } from '@/features/pendiente/ModuloPendiente';
 import { Loading, Problem, Retry } from '@/features/StatusScreens';
 import { useHashRoute } from '@/lib/router';
@@ -46,6 +47,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   if (error && !data) body = <Problem title="No se pudieron cargar los datos" actions={<Retry onClick={refetch} />}>{error.tabla ? `Error en la tabla "${error.tabla}": ` : ''}{String(error.message).slice(0, 120)}</Problem>;
   else if (loading || !data) body = <Loading label="Cargando datos…" />;
   else if (current.id === 'ini') body = <InicioPage d={data} />;
+  else if (current.id === 'tur') body = <TurnosPage d={data} owner={owner} me={me} />;
   else if (current.id === 'est') body = <EstadisticasPage d={data} />;
   else if (current.id === 'bar') body = <BarberosPage d={data} />;
   else if (current.id === 'me' && me) body = <MiPerfilPage d={data} me={me} />;

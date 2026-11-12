@@ -37,7 +37,7 @@ export function fixtures(seed: number, nowIso: string): RawTables {
   if (r() < 0.3) horarios.push({ id: uid('hor', 99), dia: 0, desde: '10:00:00', hasta: '14:00:00' });
   const clientes = Array.from({ length: 6 }, (_, i) => ({ id: uid('cli', i), nombre: 'Cliente ' + i, telefono: r() < 0.2 ? null : '0387 15' + int(400000, 499999), preferencias: null, observaciones: r() < 0.3 ? 'obs' : null, created_at: '2026-03-0' + (i + 1) + 'T12:00:00Z' }));
   const estados = ['pendiente', 'confirmado', 'atendido', 'cancelado', 'ausente'];
-  const turnos = Array.from({ length: int(10, 25) }, (_, i) => {
+  const turnos = Array.from({ length: int(30, 55) }, (_, i) => {
     const h = int(9, 20), m = pick([0, 15, 30, 45]);
     return {
       id: uid('tur', i), barbero_id: r() < 0.2 ? null : pick(barberos).id, cliente: 'Cliente ' + int(0, 5), cliente_id: r() < 0.7 ? pick(clientes).id : null, creado_por: null,

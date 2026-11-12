@@ -62,7 +62,7 @@ test('Barberos: ranking y registrar falta con confirmación', async ({ page }) =
   await primera.getByRole('button', { name: 'Registrar falta hoy' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Registrar falta' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Falta registrada' })).toBeVisible();
-  expect(log.bodies).toEqual([{ op: 'POST asistencia', body: { barbero_id: D.barberos[0].id, fecha: HOY, estado: 'falta' } }]);
+  expect(log.bodies).toEqual([{ op: 'POST asistencia', body: { barbero_id: D.barberos[0].id, fecha: HOY, estado: 'falta' }, query: '' }]);
 });
 
 test('Mi perfil (barbero): marca asistencia con la misma función de la base', async ({ page }) => {

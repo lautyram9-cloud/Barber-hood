@@ -74,7 +74,7 @@ test('dueño: un módulo no migrado lleva a la versión estable', async ({ page 
 
 test('barbero: ve solo sus secciones y NUNCA pide tablas del dueño', async ({ page }) => {
   const log = await login(page, BARBER, soloBarbero(DATA));
-  await expect(page.getByRole('heading', { name: 'Turnos' })).toBeVisible(); // primera sección del barbero
+  await expect(page.getByRole('heading', { name: 'Turnos', level: 1 })).toBeVisible(); // primera sección del barbero
   await expect(page).toHaveURL(/#\/tur$/);
   const labels = isDesktop(page)
     ? await page.locator('aside nav button').allInnerTexts()

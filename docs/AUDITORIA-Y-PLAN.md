@@ -52,7 +52,8 @@ se oculta a los barberos). El barbero ve: Turnos, Clientes y Mi perfil, y regist
 | 1 | Base técnica: proyecto, conexión, sesión y roles, datos en vivo por tabla, lógica portada con paridad, CI/CD | Hecho |
 | 2 | Sistema de diseño oscuro: tokens, componentes, menú lateral / barra inferior, Inicio | Hecho (base) |
 | 3a | Estadísticas (incl. exportación CSV), Barberos y Mi perfil (incl. marcar asistencia y registrar falta) | Hecho |
-| 3b | Turnos → Clientes → botón + y Movimientos → Caja → Comisiones → Stock → Dueño y Ajustes → `#reservar` | Pendiente |
+| 3b | Turnos (agenda día/semana/mes, solicitudes, nuevo turno, confirmar/cobrar/ausente/cancelar, reprogramar, notas, WhatsApp, vista del barbero y "Asignarme") | Hecho |
+| 3c | Clientes → botón + y Movimientos → Caja → Comisiones → Stock → Dueño y Ajustes → `#reservar` | Pendiente |
 | 4 | Paridad completa por rol + pruebas manuales en iPhone/iPad reales con usuario de prueba | Pendiente |
 | 5 | Corte: la nueva pasa a la raíz, la estable a `/legacy/`, PWA nueva con versión de caché nueva | Pendiente (requiere aprobación) |
 | 6 | Mejoras: lectura por rango de fechas, restaurar respaldos, ocultar costos al barbero (SQL aditivo, se muestra antes) | Pendiente |

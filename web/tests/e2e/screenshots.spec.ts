@@ -18,12 +18,16 @@ test('capturas', async ({ page }, info) => {
   await page.getByRole('heading', { name: 'Inicio', level: 1 }).waitFor();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/${info.project.name}-2-inicio.png`, fullPage: true });
-  for (const r of ['est', 'bar']) {
+  for (const r of ['est', 'bar', 'tur']) {
     await page.goto('#/' + r);
     await page.locator('main h1').first().waitFor();
     await page.waitForTimeout(200);
     await page.screenshot({ path: `${OUT}/${info.project.name}-4-${r}.png`, fullPage: true });
   }
+  await page.locator('main').getByRole('button').filter({ hasText: /\d\d:\d\d/ }).first().click();
+  await page.getByRole('dialog').waitFor();
+  await page.screenshot({ path: `${OUT}/${info.project.name}-5-turno.png` });
+  await page.keyboard.press('Escape');
   await page.goto('#/stk');
   await page.getByRole('heading', { name: 'Stock' }).waitFor();
   await page.screenshot({ path: `${OUT}/${info.project.name}-3-pendiente.png` });

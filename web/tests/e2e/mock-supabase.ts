@@ -8,7 +8,7 @@ export const SB = 'https://gbrutjlhdcnnlghoaxlu.supabase.co';
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
 export interface MockUser { id: string; email: string; rol: 'owner' | 'barber' | null; barberoId?: string | null }
-export interface MockLog { tables: string[]; rpcs: string[]; writes: string[]; external: string[]; bodies: { op: string; body: unknown }[] }
+export interface MockLog { tables: string[]; rpcs: string[]; writes: string[]; external: string[]; bodies: { op: string; body: unknown; query?: string }[] }
 /** Escrituras permitidas en una prueba, p. ej. 'POST asistencia' o 'rpc marcar_asistencia' (con su respuesta). */
 export type Permitidas = Record<string, unknown>;
 
@@ -46,7 +46,7 @@ export async function mockSupabase(page: Page, tables: RawTables, user: MockUser
       const t = u.pathname.slice(9);
       if (m !== 'GET' && m !== 'HEAD') {
         log.writes.push(`${m} ${t}`);
-        if (`${m} ${t}` in permitidas) { log.bodies.push({ op: `${m} ${t}`, body: req.postDataJSON() }); return { status: 201, body: permitidas[`${m} ${t}`] }; }
+        if (`${m} ${t}` in permitidas) { log.bodies.push({ op: `${m} ${t}`, body: req.postDataJSON(), query: decodeURIComponent(u.search) }); return { status: 201, body: permitidas[`${m} ${t}`] }; }
         return { status: 403, body: { message: 'Escrituras bloqueadas en pruebas' } };
       }
       log.tables.push(t);
