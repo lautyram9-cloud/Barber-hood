@@ -8,7 +8,7 @@ export interface Section { id: string; label: string; icon: LucideIcon; vis: Vis
 export const SECTIONS: Section[] = [
   { id: 'ini', label: 'Inicio', icon: Home, vis: 'owner', migrated: true },
   { id: 'tur', label: 'Turnos', icon: CalendarDays, vis: 'all', migrated: true },
-  { id: 'cli', label: 'Clientes', icon: Users, vis: 'all', migrated: false },
+  { id: 'cli', label: 'Clientes', icon: Users, vis: 'all', migrated: true },
   { id: 'cj', label: 'Caja', icon: Wallet, vis: 'owner', migrated: false },
   { id: 'caja', label: 'Movimientos', icon: ArrowLeftRight, vis: 'notBarber', migrated: false },
   { id: 'stk', label: 'Stock', icon: Boxes, vis: 'owner', migrated: false },

@@ -35,7 +35,7 @@ export function fixtures(seed: number, nowIso: string): RawTables {
     else horarios.push({ id: uid('hor', i * 2), dia, desde: '10:00:00', hasta: dia == 6 ? '18:00:00' : '20:00:00' });
   });
   if (r() < 0.3) horarios.push({ id: uid('hor', 99), dia: 0, desde: '10:00:00', hasta: '14:00:00' });
-  const clientes = Array.from({ length: 6 }, (_, i) => ({ id: uid('cli', i), nombre: 'Cliente ' + i, telefono: r() < 0.2 ? null : '0387 15' + int(400000, 499999), preferencias: null, observaciones: r() < 0.3 ? 'obs' : null, created_at: '2026-03-0' + (i + 1) + 'T12:00:00Z' }));
+  const clientes = Array.from({ length: 10 }, (_, i) => ({ id: uid('cli', i), nombre: 'Cliente ' + i, telefono: r() < 0.2 ? null : '0387 15' + int(400000, 499999), preferencias: null, observaciones: r() < 0.3 ? 'obs' : null, created_at: '2026-03-' + String(i + 1).padStart(2, '0') + 'T12:00:00Z' }));
   const estados = ['pendiente', 'confirmado', 'atendido', 'cancelado', 'ausente'];
   const turnos = Array.from({ length: int(30, 55) }, (_, i) => {
     const h = int(9, 20), m = pick([0, 15, 30, 45]);
@@ -56,7 +56,8 @@ export function fixtures(seed: number, nowIso: string): RawTables {
     const created = `${f}T${String(int(10, 23)).padStart(2, '0')}:${String(int(0, 59)).padStart(2, '0')}:00-03:00`;
     const cobrado = r() < 0.85;
     return {
-      id: uid('ing', i), barbero_id: r() < 0.1 ? null : pick(barberos).id, cantidad: cant, cliente: r() < 0.5 ? 'Cliente ' + int(0, 5) : null, cliente_id: r() < 0.5 ? pick(clientes).id : null,
+      id: uid('ing', i), barbero_id: r() < 0.1 ? null : pick(barberos).id, cantidad: cant, cliente: r() < 0.5 ? 'Cliente ' + int(0, 5) : null, // clientes 6-8 sin visitas; el 9 con una sola visita
+      cliente_id: i == 0 ? clientes[9].id : r() < 0.5 ? pick(clientes.slice(0, 6)).id : null,
       cobrado, cobrado_at: cobrado && r() < 0.7 ? `${day(-int(0, 3))}T1${int(0, 9)}:00:00-03:00` : null, comision_monto: r() < 0.1 ? null : num(int(1, 6) * 1000),
       comision_pct: num(40), concepto: prod ? p.nombre : s.nombre, costo_unit: num(prod ? 4000 : 0), creado_por: null, created_at: created, fecha: f,
       liquidacion_id: r() < 0.2 && liquidaciones.length ? pick(liquidaciones).id : null, medio_pago: pick(['efectivo', 'transferencia', 'tarjeta']), op_id: uid('op', i),
