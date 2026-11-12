@@ -38,7 +38,7 @@ export async function mockSupabase(page: Page, tables: RawTables, user: MockUser
     if (u.pathname === '/auth/v1/logout') return { status: 204, body: {} };
     if (u.pathname.startsWith('/rest/v1/rpc/')) {
       const fn = u.pathname.slice(13); log.rpcs.push(fn);
-      if (`rpc ${fn}` in permitidas) { log.bodies.push({ op: `rpc ${fn}`, body: req.postDataJSON() }); return { status: 200, body: permitidas[`rpc ${fn}`] }; }
+      if (`rpc ${fn}` in permitidas) { log.bodies.push({ op: `rpc ${fn}`, body: req.postDataJSON() ?? {} }); return { status: 200, body: permitidas[`rpc ${fn}`] }; }
       if (fn === 'caja_resumen') return { status: 200, body: { inicial: 10000, esperado: 34567, pendiente_cobro: 0, ing_efectivo: 0, mov_in: 0, gastos_efectivo: 0, liquidaciones: 0, adelantos: 0, mov_out: 0, ing_transferencia: 0, ing_tarjeta: 0 } };
       return { status: 403, body: { message: 'RPC no permitida en pruebas: ' + fn } };
     }

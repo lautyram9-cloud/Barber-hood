@@ -65,12 +65,11 @@ test('dueño: Inicio muestra los mismos números que calcula la lógica validada
   expect(log.external, 'no debe haber pedidos a otros servidores').toEqual([]);
 });
 
-test('dueño: un módulo no migrado lleva a la versión estable', async ({ page }) => {
+test('dueño: siempre tiene a mano la versión estable', async ({ page }) => {
   await login(page, OWNER);
   await page.locator('main h1').first().waitFor();
-  await page.goto('#/due');
-  await expect(page.getByRole('heading', { name: 'Dueño' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Abrir versión estable' }).first()).toHaveAttribute('href', '../');
+  if (isDesktop(page)) await expect(page.locator('aside').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', '../');
+  else { await page.locator('nav[aria-label="Secciones"]').last().getByRole('button', { name: 'Más' }).click(); await expect(page.getByRole('dialog').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', '../'); }
 });
 
 test('barbero: ve solo sus secciones y NUNCA pide tablas del dueño', async ({ page }) => {
@@ -95,11 +94,27 @@ test('usuario sin barbero vinculado no entra', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Usuario sin barbero' })).toBeVisible();
 });
 
-test('#reservar sigue llevando a la reserva pública de la versión estable', async ({ page }) => {
+test('#reservar: el cliente reserva sin login (solo funciones públicas)', async ({ page }) => {
   await page.clock.setFixedTime(NOW);
-  await mockSupabase(page, DATA, OWNER, NOW);
+  const info = {
+    barberos: DATA.barberos!.filter((b) => b.activo).map((b) => ({ id: b.id, nombre: b.nombre, slot_min: b.slot_min })),
+    servicios: DATA.servicios!.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre, precio: s.precio, dur: s.duracion_min })),
+    horarios: DATA.horarios!.map((h) => ({ dia: h.dia, desde: h.desde, hasta: h.hasta })), ocupados: [],
+  };
+  const log = await mockSupabase(page, DATA, OWNER, NOW, { 'rpc public_info': info, 'rpc reservar_publico': 'tur-nuevo' });
   await page.goto('#reservar');
-  await expect(page.getByRole('link', { name: 'Ir a reservar' })).toHaveAttribute('href', '../#reservar');
+  await expect(page.getByRole('heading', { name: 'Reservá tu turno' })).toBeVisible();
+  await page.getByRole('button', { name: 'Solicitar turno' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Completá nombre, teléfono y horario');
+  await page.getByLabel('Tu nombre').fill('Ana');
+  await page.getByLabel('Tu teléfono').fill('3874123456');
+  await page.getByRole('button', { name: new RegExp('^' + info.servicios[0].nombre + ' ·') }).click();
+  const dia = await page.getByLabel('Día').inputValue(), hora = await page.getByLabel('Horario').inputValue();
+  await page.getByRole('button', { name: 'Solicitar turno' }).click();
+  await expect(page.getByRole('heading', { name: '¡Solicitud enviada!' })).toBeVisible();
+  expect(log.rpcs.filter((r) => r != 'public_info')).toEqual(['reservar_publico']);
+  expect(log.bodies.at(-1)!.body).toMatchObject({ p_nombre: 'Ana', p_tel: '3874123456', p_inicio: `${dia}T${hora}:00`, p_servicios: [info.servicios[0].id], p_notas: null });
+  expect(log.tables, 'la reserva pública no lee tablas').toEqual([]);
 });
 
 test('la versión estable sigue publicada intacta en la raíz', async ({ request }) => {

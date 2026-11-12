@@ -16,8 +16,8 @@ export const SECTIONS: Section[] = [
   { id: 'bar', label: 'Barberos', icon: TrendingUp, vis: 'owner', migrated: true },
   { id: 'me', label: 'Mi perfil', icon: UserRound, vis: 'barber', migrated: true },
   { id: 'com', label: 'Comisiones', icon: HandCoins, vis: 'owner', migrated: true },
-  { id: 'due', label: 'Dueño', icon: Crown, vis: 'owner', migrated: false },
-  { id: 'aj', label: 'Ajustes', icon: Settings, vis: 'owner', migrated: false },
+  { id: 'due', label: 'Dueño', icon: Crown, vis: 'owner', migrated: true },
+  { id: 'aj', label: 'Ajustes', icon: Settings, vis: 'owner', migrated: true },
 ];
 
 export function sectionsFor(owner: boolean, isBarber: boolean) {

@@ -36,8 +36,8 @@ export async function loadLegacy(tables: RawTables, opts: { now: number; owner: 
   const els = new Map<string, Record<string, unknown>>();
   const byId = (id: string) => {
     if (!els.has(id)) els.set(id, el());
-    const e = els.get(id)!, dom = (ctx.__dom ?? {}) as Record<string, string>;
-    if (id in dom) e.value = dom[id];
+    const e = els.get(id)!, dom = (ctx.__dom ?? {}) as Record<string, unknown>;
+    if (id in dom) { const v = dom[id] as unknown; if (typeof v === 'boolean') e.checked = v; else e.value = v; }
     return e;
   };
   const ctx: Record<string, unknown> = {
