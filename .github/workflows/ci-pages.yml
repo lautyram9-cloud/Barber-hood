@@ -1,0 +1,91 @@
+name: CI y publicación (GitHub Pages)
+
+# Verifica en cada push/PR. Publica SOLO desde main, SOLO si todas las verificaciones
+# pasan y SOLO si la variable del repositorio PAGES_DEPLOY vale "true" (interruptor
+# manual para activar la publicación por Actions sin riesgo).
+#
+# Sitio publicado:
+#   /Barber-hood/        → versión estable (index.html vanilla), copiada SIN cambios
+#   /Barber-hood/next/   → versión nueva (React) en vista previa
+
+on:
+  push:
+    branches: [main, redesign-premium]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Verificar y compilar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Instalar dependencias (versiones exactas del lockfile)
+        run: npm ci
+
+      - name: Tipos (TypeScript estricto)
+        run: npm run typecheck
+
+      - name: Pruebas unitarias y de paridad con la versión estable
+        run: npm test
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Pruebas de punta a punta (Supabase simulado, sin datos reales)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+      - name: Armar sitio (estable en la raíz + nueva en /next/) y verificar integridad
+        working-directory: .
+        run: bash scripts/assemble-pages.sh _site
+
+      - name: Guardar reporte de pruebas si fallan
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
+
+      - name: Subir sitio para Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    name: Publicar en GitHub Pages
+    needs: verificar
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
