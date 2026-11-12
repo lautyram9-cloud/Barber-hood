@@ -74,6 +74,7 @@ export function useAccion() {
     } finally {
       setOcupado(false);
       tablas.forEach((t) => qc.invalidateQueries({ queryKey: tableKey(t) }));
+      qc.invalidateQueries({ queryKey: ['caja_resumen'] });
     }
   }, [ocupado, qc, toast]);
   return { run, ocupado };

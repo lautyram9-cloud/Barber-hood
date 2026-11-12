@@ -55,7 +55,8 @@ se oculta a los barberos). El barbero ve: Turnos, Clientes y Mi perfil, y regist
 | 3b | Turnos (agenda día/semana/mes, solicitudes, nuevo turno, confirmar/cobrar/ausente/cancelar, reprogramar, notas, WhatsApp, vista del barbero y "Asignarme") | Hecho |
 | 3c | Clientes (búsqueda, filtros, ficha con historial y próximos turnos, reactivar por WhatsApp, preferencias/observaciones) | Hecho |
 | 3d | Botón + (ingresos y gastos rápidos) y Movimientos (indicadores, pendientes de cobro, registrar, cambiar fecha, anular) | Hecho |
-| 3e | Caja → Comisiones → Stock → Dueño y Ajustes → `#reservar` | Pendiente |
+| 3e | Caja (abrir, esperado, movimientos manuales, arqueo y cierre con confirmación, historial; horas en hora local) | Hecho |
+| 3f | Comisiones → Stock → Dueño y Ajustes → `#reservar` | Pendiente |
 | 4 | Paridad completa por rol + pruebas manuales en iPhone/iPad reales con usuario de prueba | Pendiente |
 | 5 | Corte: la nueva pasa a la raíz, la estable a `/legacy/`, PWA nueva con versión de caché nueva | Pendiente (requiere aprobación) |
 | 6 | Mejoras: lectura por rango de fechas, restaurar respaldos, ocultar costos al barbero (SQL aditivo, se muestra antes) | Pendiente |
