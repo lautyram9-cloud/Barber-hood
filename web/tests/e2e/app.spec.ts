@@ -67,8 +67,9 @@ test('dueño: Inicio muestra los mismos números que calcula la lógica validada
 
 test('dueño: un módulo no migrado lleva a la versión estable', async ({ page }) => {
   await login(page, OWNER);
-  await page.goto('#/stk');
-  await expect(page.getByRole('heading', { name: 'Stock' })).toBeVisible();
+  await page.locator('main h1').first().waitFor();
+  await page.goto('#/due');
+  await expect(page.getByRole('heading', { name: 'Dueño' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Abrir versión estable' }).first()).toHaveAttribute('href', '../');
 });
 

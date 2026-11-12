@@ -28,6 +28,11 @@ export function fixtures(seed: number, nowIso: string): RawTables {
     id: uid('prd', i), nombre, activo: i < 3, categoria: r() < 0.3 ? null : pick(['Ceras', 'Shampoos', 'Otros']), costo: num(int(2, 8) * 1000), precio: num(int(9, 15) * 1000),
     comision_pct: num(pick([0, 10, 15])), proveedor_id: r() < 0.5 ? proveedores[0].id : null, stock: int(0, 12), stock_min: int(0, 4),
   }));
+  // casos borde: stock igual al mínimo y stock/mínimo en cero
+  productos.push(
+    { id: uid('prd', 8), nombre: 'Peine', activo: true, categoria: 'Otros', costo: num(1000), precio: num(3000), comision_pct: num(0), proveedor_id: proveedores[0].id, stock: 3, stock_min: 3 },
+    { id: uid('prd', 9), nombre: 'Navaja', activo: true, categoria: null, costo: num(500), precio: num(1500), comision_pct: num(0), proveedor_id: null, stock: 0, stock_min: 0 },
+  );
   const horarios: RawTables['horarios'] = [];
   [1, 2, 3, 4, 5, 6].forEach((dia, i) => {
     if (r() < 0.15) return; // día sin cargar: la app usa el horario por defecto
@@ -65,7 +70,7 @@ export function fixtures(seed: number, nowIso: string): RawTables {
     };
   });
   const gastos = Array.from({ length: int(5, 20) }, (_, i) => ({ id: uid('gas', i), concepto: pick(['Alquiler', 'Luz', 'Insumos']), creado_por: null, created_at: `${day(-i)}T10:00:00Z`, fecha: i < 2 ? day(0) : day(-int(0, 400)), medio_pago: 'efectivo', monto: num(int(1, 50) * 1000), tipo: i == 0 ? 'fijo' : pick(['fijo', 'variable']) }));
-  const mov_stock = Array.from({ length: int(4, 12) }, (_, i) => ({
+  const mov_stock = Array.from({ length: int(30, 60) }, (_, i) => ({
     id: uid('stk', i), cantidad: pick([-2, -1, 3, 5]), costo_unit: r() < 0.2 ? null : num(3000), creado_por: null, created_at: `${day(-i)}T11:00:00Z`, fecha: day(-int(0, 60)),
     ingreso_id: r() < 0.4 ? pick(ingresos).id : null, medio_pago: 'efectivo', nota: null, producto_id: pick(productos).id, proveedor: r() < 0.5 ? 'Prov' : null, proveedor_id: null, tipo: pick(['compra', 'venta', 'perdida', 'ajuste']),
   }));

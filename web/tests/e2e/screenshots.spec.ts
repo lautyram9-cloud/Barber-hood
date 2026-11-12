@@ -28,7 +28,7 @@ test('capturas', async ({ page }, info) => {
   await page.getByRole('dialog').waitFor();
   await page.screenshot({ path: `${OUT}/${info.project.name}-5-turno.png` });
   await page.keyboard.press('Escape');
-  await page.goto('#/stk');
-  await page.getByRole('heading', { name: 'Stock' }).waitFor();
+  await page.goto('#/due');
+  await page.getByRole('heading', { name: 'Dueño' }).waitFor();
   await page.screenshot({ path: `${OUT}/${info.project.name}-3-pendiente.png` });
 });
