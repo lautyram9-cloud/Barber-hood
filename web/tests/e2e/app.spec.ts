@@ -106,3 +106,14 @@ test('la versión estable sigue publicada intacta en la raíz', async ({ request
   expect(res.status()).toBe(200);
   expect(await res.text()).toBe(readFileSync(new URL('../../../index.html', import.meta.url), 'utf8'));
 });
+
+test('ninguna sección se desborda hacia los costados', async ({ page }) => {
+  await login(page, OWNER);
+  await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible();
+  for (const r of ['ini', 'tur', 'cli', 'cj', 'caja', 'stk', 'est', 'bar', 'com', 'due', 'aj']) {
+    await page.goto('#/' + r);
+    await page.locator('main h1').first().waitFor();
+    const [sw, w] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+    expect(sw, `la sección ${r} es más ancha que la pantalla`).toBeLessThanOrEqual(w);
+  }
+});

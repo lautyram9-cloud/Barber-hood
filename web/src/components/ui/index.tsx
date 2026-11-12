@@ -18,9 +18,9 @@ export function Card({ title, action, children, className }: { title?: ReactNode
 
 export function Kpi({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'ok' | 'ko' | 'accent' }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-line bg-surface p-4">
+    <div className="min-w-0 rounded-2xl border border-line bg-surface p-3 sm:p-4">
       <p className="truncate text-xs text-muted">{label}</p>
-      <p className={cx('num mt-1 truncate text-xl font-semibold tracking-tight sm:text-2xl', tone === 'ok' && 'text-ok', tone === 'ko' && 'text-ko', tone === 'accent' && 'text-accent')}>{value}</p>
+      <p className={cx('num mt-1 truncate text-[17px] font-semibold tracking-tight sm:text-2xl', tone === 'ok' && 'text-ok', tone === 'ko' && 'text-ko', tone === 'accent' && 'text-accent')}>{value}</p>
       {hint && <div className="mt-1 text-xs">{hint}</div>}
     </div>
   );

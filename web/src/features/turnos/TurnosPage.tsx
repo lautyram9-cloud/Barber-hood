@@ -58,7 +58,7 @@ function TurnosDueno({ d, onOpen }: { d: AppData; onOpen(t: Turno): void }) {
         </Select>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="space-y-4 lg:col-span-2 lg:space-y-6">
           {vista == 'mes' && <Mes d={d} ref_={ref} tb={tb} onDia={(f) => { setRef(f); setVista('dia'); }} />}
           <Card title={`Agenda ${vista == 'sem' ? a.slice(5) + ' → ' + b.slice(5) : ref.slice(5)}`}>

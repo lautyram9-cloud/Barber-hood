@@ -45,7 +45,7 @@ export function EstadisticasPage({ d }: { d: AppData }) {
         <Kpi label="Mes" value={fmt(ing('mes'))} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Período seleccionado">
           {detalle.map(([k, v, sub]) => <Row key={k} left={sub ? <span className="pl-4 text-muted">{k}</span> : k} right={fmt(v)} />)}
           <Row left={<b>Ganancia real estimada</b>} right={<b className={r.neto >= 0 ? 'text-ok' : 'text-ko'}>{fmt(r.neto)}</b>} />
@@ -68,7 +68,7 @@ export function EstadisticasPage({ d }: { d: AppData }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Servicios: más vendidos y margen">
           {sv.length ? sv.map((s) => <Row key={s.nombre} left={s.nombre} sub={`${s.cantidad} servicios · ${fmt(s.ingresos)} · margen ${fmt(s.margen)} (${s.margenPct}%)`} right={s.cantidad} />) : <Empty>Sin servicios.</Empty>}
         </Card>
@@ -77,7 +77,7 @@ export function EstadisticasPage({ d }: { d: AppData }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Facturación por mes"><Bars labels={meses} values={R.map((x) => x.ingresos)} format={kf} /></Card>
         <Card title="Ganancia por mes"><Bars labels={meses} values={R.map((x) => Math.max(0, x.neto))} format={kf} /></Card>
         <Card title="Evolución de la rentabilidad (%)"><LineChart labels={meses} values={R.map((x) => (x.ingresos ? (x.neto / x.ingresos) * 100 : 0))} suffix="%" /></Card>
@@ -87,7 +87,7 @@ export function EstadisticasPage({ d }: { d: AppData }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Horarios de mayor demanda (turnos)">
           {horas.length ? <Bars labels={horas.map((h) => h[0] + 'h')} values={horas.map((h) => h[1])} format={String} /> : <Empty>Sin turnos en el período.</Empty>}
         </Card>

@@ -10,6 +10,9 @@ import { BarberosPage } from '@/features/barberos/BarberosPage';
 import { MiPerfilPage } from '@/features/perfil/MiPerfilPage';
 import { TurnosPage } from '@/features/turnos/TurnosPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
+import { MovimientosPage } from '@/features/movimientos/MovimientosPage';
+import { BotonMas } from '@/features/movimientos/BotonMas';
+import { SECCIONES_CON_BOTON } from '@/domain/movimientos';
 import { ModuloPendiente } from '@/features/pendiente/ModuloPendiente';
 import { Loading, Problem, Retry } from '@/features/StatusScreens';
 import { useHashRoute } from '@/lib/router';
@@ -50,6 +53,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   else if (current.id === 'ini') body = <InicioPage d={data} />;
   else if (current.id === 'tur') body = <TurnosPage d={data} owner={owner} me={me} />;
   else if (current.id === 'cli') body = <ClientesPage d={data} />;
+  else if (current.id === 'caja') body = <MovimientosPage d={data} />;
   else if (current.id === 'est') body = <EstadisticasPage d={data} />;
   else if (current.id === 'bar') body = <BarberosPage d={data} />;
   else if (current.id === 'me' && me) body = <MiPerfilPage d={data} me={me} />;
@@ -58,6 +62,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   return (
     <AppShell sections={sections} current={current.id} onNavigate={navigate} email={email} rolLabel={owner ? 'Dueño' : 'Barbero'} onSignOut={onSignOut}>
       {body}
+      {data && SECCIONES_CON_BOTON.includes(current.id) && <BotonMas d={data} owner={owner} me={me} />}
     </AppShell>
   );
 }

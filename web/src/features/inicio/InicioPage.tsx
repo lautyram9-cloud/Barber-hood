@@ -43,7 +43,7 @@ export function InicioPage({ d }: { d: AppData }) {
         <Kpi label="En caja" value={d.cajaAbierta ? (caja.data ? fmt(caja.data.esperado) : '…') : 'Cerrada'} tone="accent" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
         <div className="space-y-4 lg:col-span-3 lg:space-y-6">
           <Card title={`Turnos de hoy (${hoy.length})`}>
             {hoy.length ? hoy.map((x) => (

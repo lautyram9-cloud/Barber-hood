@@ -15,7 +15,7 @@ export function BarberosPage({ d }: { d: AppData }) {
     <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Barberos" subtitle="Ranking y rendimiento por barbero" />
       <PeriodBar />
-      <div className="grid gap-4 lg:grid-cols-5 lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
         <Card title="Ranking de barberos" className="lg:col-span-2">
           {R.length ? R.map((s, i) => (
             <Row key={s.id} left={<><span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-muted">{i + 1}</span>{s.nombre}</>}

@@ -10,7 +10,7 @@ export const SECTIONS: Section[] = [
   { id: 'tur', label: 'Turnos', icon: CalendarDays, vis: 'all', migrated: true },
   { id: 'cli', label: 'Clientes', icon: Users, vis: 'all', migrated: true },
   { id: 'cj', label: 'Caja', icon: Wallet, vis: 'owner', migrated: false },
-  { id: 'caja', label: 'Movimientos', icon: ArrowLeftRight, vis: 'notBarber', migrated: false },
+  { id: 'caja', label: 'Movimientos', icon: ArrowLeftRight, vis: 'notBarber', migrated: true },
   { id: 'stk', label: 'Stock', icon: Boxes, vis: 'owner', migrated: false },
   { id: 'est', label: 'Estadísticas', icon: BarChart3, vis: 'owner', migrated: true },
   { id: 'bar', label: 'Barberos', icon: TrendingUp, vis: 'owner', migrated: true },
