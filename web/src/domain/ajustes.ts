@@ -65,6 +65,32 @@ export async function generarRespaldo(leer: (tabla: string, orden?: string[]) =>
   return { nombre: 'barberhood-copia-' + today() + '.json', texto: JSON.stringify(o) };
 }
 
+/** Nombres legibles de cada tabla para el resumen de la restauración. */
+export const NOMBRE_TABLA: Record<string, string> = {
+  barberos: 'barberos', servicios: 'servicios', proveedores: 'proveedores', productos: 'productos', horarios: 'horarios', clientes: 'clientes',
+  comisiones_barbero: 'comisiones por barbero', turnos: 'turnos', turno_items: 'servicios de turnos', cajas: 'cajas', caja_mov: 'movimientos de caja',
+  liquidaciones: 'liquidaciones', ingresos: 'ingresos', adelantos: 'adelantos', asistencia: 'asistencias', mov_stock: 'movimientos de stock',
+  gastos: 'gastos', dueno_mov: 'movimientos del dueño',
+};
+/** Lee y valida el archivo de copia (mismo formato que generarRespaldo). */
+export function leerRespaldo(texto: string): { respaldo: Record<string, unknown> } | { error: string } {
+  let o: unknown;
+  try { o = JSON.parse(texto); } catch { return { error: 'El archivo no es una copia válida' }; }
+  if (!o || typeof o !== 'object' || Array.isArray(o) || (o as { version?: unknown }).version !== 1) return { error: 'El archivo no es una copia de Barber Hood' };
+  const r = o as Record<string, unknown>;
+  if (!TABLAS_RESPALDO.some((t) => Array.isArray(r[t]))) return { error: 'La copia no tiene datos' };
+  if (TABLAS_RESPALDO.some((t) => r[t] !== undefined && !Array.isArray(r[t]))) return { error: 'La copia está dañada' };
+  return { respaldo: r };
+}
+/** Filas que faltan por tabla (solo las que tienen algo), como "3 ingresos, 1 turno". */
+export function faltantes(res: Record<string, number>) {
+  const filas = TABLAS_RESPALDO.filter((t) => (res[t] ?? 0) > 0).map((t) => ({ tabla: t, nombre: NOMBRE_TABLA[t] ?? t, n: res[t] }));
+  return { filas, total: filas.reduce((a, f) => a + f.n, 0), texto: filas.map((f) => `${f.nombre}: ${f.n}`).join(", ") };
+}
+/** Restaurar = RECUPERAR LO QUE FALTA (nunca pisa ni borra). aplicar=false solo simula. Función SQL restaurar_respaldo (etapa 10). */
+export const restaurarRespaldo = async (db: Db, respaldo: Record<string, unknown>, aplicar: boolean) =>
+  (await ok(db.rpc('restaurar_respaldo', { p: respaldo, p_aplicar: aplicar }))) as Record<string, number>;
+
 export interface FilaAuditoria { usuario: string | null; op: string | null; tabla: string | null; fecha: string; fila: unknown; antes: unknown }
 const TN: Record<string, string> = { ingresos: 'un ingreso', gastos: 'un gasto', liquidaciones: 'una liquidación', adelantos: 'un adelanto', productos: 'un producto', servicios: 'un servicio', barberos: 'un barbero' };
 const OP: Record<string, string> = { INSERT: 'creó', UPDATE: 'modificó', DELETE: 'eliminó' };

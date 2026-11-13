@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Download, History, LogOut, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Download, History, LogOut, Trash2, Upload } from 'lucide-react';
 import type { AppData, Barbero } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
 import { fetchAll, sb } from '@/lib/supabase';
 import { guardarArchivo } from '@/lib/files';
 import { useAccion, useFeedback } from '@/state/feedback';
+import { tableKey } from '@/state/data';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Row } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
@@ -17,7 +19,29 @@ const instalada = () => (navigator as Navigator & { standalone?: boolean }).stan
 /** Ajustes (V.aj): cuenta, copias, disponibilidad, barberos/comisiones y servicios. */
 export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email: string; owner: boolean; onSignOut(): void }) {
   const [aud, setAud] = useState(false);
-  const { toast } = useFeedback();
+  const { toast, confirmar } = useFeedback();
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [restaurando, setRestaurando] = useState(false);
+  // Restaurar = recuperar lo que falta: primero se simula, se muestra qué se agregaría y recién ahí se aplica.
+  const restaurar = async (file: File) => {
+    setRestaurando(true);
+    try {
+      const l = A.leerRespaldo(await file.text());
+      if ('error' in l) return toast(l.error);
+      const f = A.faltantes(await A.restaurarRespaldo(sb, l.respaldo, false));
+      if (!f.total) return toast('No falta nada: todo lo de la copia ya está');
+      const ok = await confirmar({ titulo: '¿Recuperar lo que falta?', texto: `Se van a agregar: ${f.texto}. No se modifica ni se borra nada de lo que ya existe.`, accion: 'Recuperar' });
+      if (!ok) return;
+      const r = A.faltantes(await A.restaurarRespaldo(sb, l.respaldo, true));
+      toast(`Copia restaurada: ${r.total} registros recuperados`);
+      qc.invalidateQueries({ queryKey: ['tabla'] });
+      A.TABLAS_RESPALDO.forEach((t) => qc.invalidateQueries({ queryKey: tableKey(t) }));
+    } catch (e) {
+      const m = (e as { code?: string; message?: string }) ?? {};
+      toast(m.code == 'P0001' ? String(m.message) : m.code == '23503' ? 'La copia depende de datos que no están: no se restauró nada' : 'No se pudo restaurar: no se cambió nada');
+    } finally { setRestaurando(false); if (fileRef.current) fileRef.current.value = ''; }
+  };
   const backup = async () => {
     try { const r = await A.generarRespaldo((t, o) => fetchAll(t as TableName, o)); await guardarArchivo(r.nombre, 'application/json', r.texto, false); toast('Copia lista'); }
     catch { toast('No se pudo generar la copia'); }
@@ -35,9 +59,11 @@ export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email:
           <Card title="Copias y control">
             <div className="grid gap-2">
               <Button variant="outline" onClick={backup}><Download size={16} /> Descargar copia de seguridad</Button>
+              <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label="Archivo de copia de seguridad" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) restaurar(f); }} />
+              <Button variant="outline" disabled={restaurando} onClick={() => fileRef.current?.click()}><Upload size={16} /> Restaurar copia de seguridad</Button>
               <Button variant="outline" onClick={() => setAud(true)}><History size={16} /> Historial de cambios</Button>
             </div>
-            <p className="mt-3 text-xs text-subtle">La copia incluye todos los datos en un archivo. Guardala en un lugar seguro.</p>
+            <p className="mt-3 text-xs text-subtle">La copia incluye todos los datos en un archivo. Guardala en un lugar seguro. Al restaurar, solo se recupera lo que falta: no se pisa ni se borra nada de lo que ya existe.</p>
           </Card>
         )}
       </div>

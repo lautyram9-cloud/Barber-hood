@@ -65,3 +65,47 @@ test('Dueño: movimiento privado', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Guardado' })).toBeVisible();
   expect(log.bodies).toEqual([{ op: 'POST dueno_mov', body: { fecha: '2026-11-12', tipo: 'gas', concepto: 'Nafta', monto: 7000 }, query: '' }]);
 });
+
+test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nunca pisa)', () => {
+  const copia = (o: object = { ingresos: [{ id: 'x1' }], turnos: [{ id: 't1' }] }) => ({ name: 'copia.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ version: 1, fecha: '2026-11-01T00:00:00Z', ...o })) });
+  const toastDe = (page: Page, t: string) => expect(page.getByRole('status').filter({ hasText: t })).toBeVisible();
+
+  test('simula, muestra qué falta, pide confirmación y recién ahí aplica', async ({ page }) => {
+    const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 2, turnos: 1, clientes: 0 } });
+    await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
+    const dlg = page.getByRole('alertdialog');
+    await expect(dlg).toContainText('Se van a agregar: turnos: 1, ingresos: 2');
+    await expect(dlg).toContainText('No se modifica ni se borra nada');
+    expect(log.bodies.map((b) => [b.op, (b.body as { p_aplicar: boolean }).p_aplicar]), 'antes de confirmar solo simula').toEqual([['rpc restaurar_respaldo', false]]);
+    await dlg.getByRole('button', { name: 'Recuperar' }).click();
+    await toastDe(page, 'Copia restaurada: 3 registros recuperados');
+    expect(log.bodies.map((b) => (b.body as { p_aplicar: boolean }).p_aplicar)).toEqual([false, true]);
+    expect((log.bodies[1].body as { p: { version: number; ingresos: unknown[] } }).p).toMatchObject({ version: 1, ingresos: [{ id: 'x1' }] });
+    expect(log.writes, 'solo la función; ninguna escritura directa a tablas').toEqual([]);
+  });
+
+  test('cancelar no escribe nada', async ({ page }) => {
+    const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 1 } });
+    await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByRole('alertdialog')).toBeHidden();
+    expect(log.bodies.map((b) => (b.body as { p_aplicar: boolean }).p_aplicar)).toEqual([false]);
+  });
+
+  test('si no falta nada, avisa y no pide confirmar', async ({ page }) => {
+    const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 0, turnos: 0 } });
+    await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
+    await toastDe(page, 'No falta nada: todo lo de la copia ya está');
+    await expect(page.getByRole('alertdialog')).toBeHidden();
+    expect(log.bodies).toHaveLength(1);
+  });
+
+  test('archivos inválidos se rechazan sin llamar a la base', async ({ page }) => {
+    const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 1 } });
+    await page.getByLabel('Archivo de copia de seguridad').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('esto no es json') });
+    await toastDe(page, 'El archivo no es una copia válida');
+    await page.getByLabel('Archivo de copia de seguridad').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"version":2,"ingresos":[]}') });
+    await toastDe(page, 'El archivo no es una copia de Barber Hood');
+    expect(log.bodies).toEqual([]);
+  });
+});
