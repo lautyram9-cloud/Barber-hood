@@ -64,7 +64,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
 
   return (
     <AppShell sections={sections} current={current.id} onNavigate={navigate} email={email} rolLabel={owner ? 'Dueño' : 'Barbero'} onSignOut={onSignOut}>
-      {body}
+      <div key={current.id} className="page-enter">{body}</div>
       {data && SECCIONES_CON_BOTON.includes(current.id) && <BotonMas d={data} owner={owner} me={me} />}
     </AppShell>
   );
