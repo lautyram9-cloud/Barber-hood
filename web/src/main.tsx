@@ -23,3 +23,9 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+// PWA: solo cuando la app está en la raíz del sitio (corte final). En la vista previa (/next/) NO se
+// registra, para no competir con el service worker de la versión estable que cubre esa ruta.
+if ('serviceWorker' in navigator && import.meta.env.PROD && !location.pathname.includes('/next/')) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}

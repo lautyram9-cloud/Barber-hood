@@ -17,5 +17,9 @@ export function resolveSupabaseConfig(env: Record<string, string | undefined>) {
 
 export const SUPABASE = resolveSupabaseConfig(import.meta.env as Record<string, string | undefined>);
 
-/** URL de la versión estable (vanilla). Desde /next/ es la carpeta superior. */
-export const LEGACY_APP_URL = '../';
+/**
+ * URL de la versión estable (vanilla). Dos diseños de sitio (ver scripts/assemble-pages.sh):
+ *  - vista previa: la nueva vive en /next/ y la estable en la raíz → '../'
+ *  - corte final:  la nueva está en la raíz y la estable en /legacy/ → './legacy/'
+ */
+export const LEGACY_APP_URL = typeof location !== 'undefined' && location.pathname.includes('/next/') ? '../' : './legacy/';
