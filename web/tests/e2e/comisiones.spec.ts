@@ -17,7 +17,7 @@ test('liquidar con confirmación, adelanto y comprobante', async ({ page }) => {
   await page.locator('main h1').first().waitFor();
   await page.goto('#/com');
   await expect(page.getByRole('heading', { name: 'Comisiones', level: 1 })).toBeVisible();
-  const b = D.barberos[0], p = C.previaLiquidacion(D, b.id, 'sem', '2026-11-12');
+  const b = D.barberos[0], p = C.previaLiquidacion(D, b.id, 'sem', '2026-11-12', '2026-11-12'); // misma fecha fija que el reloj del navegador
   await page.locator('main section', { hasText: 'Comisiones del período' }).getByRole('button', { name: 'Liquidar' }).first().click();
   const hoja = page.getByRole('dialog', { name: `Liquidar a ${b.nombre}` });
   await expect(hoja).toContainText(L.formatoPesos(p.aPagar));

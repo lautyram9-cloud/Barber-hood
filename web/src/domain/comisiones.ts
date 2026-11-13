@@ -11,8 +11,9 @@ function fechaValida(f: string) {
 }
 
 /** Resumen previo a liquidar: comisiones no liquidadas hasta el fin del período (o hoy) menos adelantos pendientes. */
-export function previaLiquidacion(d: AppData, barberoId: string, per: Periodo, ref: string) {
-  const fin = rango(per, ref)[1], h = fechaValida(fin < today() ? fin : today());
+// `hoy` se puede fijar (pruebas); por defecto es la fecha local actual.
+export function previaLiquidacion(d: AppData, barberoId: string, per: Periodo, ref: string, hoy = today()) {
+  const fin = rango(per, ref)[1], h = fechaValida(fin < hoy ? fin : hoy);
   const M = d.movs.filter((m) => m.tipo == 'ing' && m.barberoId == barberoId && !m.liquidacionId && m.fecha <= h);
   const comisiones = M.reduce((t, m) => t + (+(m.comisionMonto as number) || 0), 0), adelantos = sumMonto(d.adelantos.filter((a) => a.barberoId == barberoId && !a.liquidacionId));
   return { hasta: h, operaciones: M.length, comisiones, adelantos, aPagar: comisiones - adelantos };
