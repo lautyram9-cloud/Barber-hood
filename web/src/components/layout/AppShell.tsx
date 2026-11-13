@@ -96,8 +96,8 @@ export function AppShell({ sections, current, onNavigate, email, rolLabel, onSig
 
       {more && (
         <div className="fixed inset-0 z-30 lg:hidden" role="dialog" aria-modal="true" aria-label="Más secciones">
-          <button className="absolute inset-0 bg-black/70" aria-hidden="true" tabIndex={-1} onClick={() => setMore(false)} />
-          <div className="pb-safe absolute inset-x-0 bottom-0 mx-auto max-w-xl rounded-t-3xl border-t border-line bg-surface px-4 pt-3">
+          <button className="backdrop-enter absolute inset-0 bg-black/70" aria-hidden="true" tabIndex={-1} onClick={() => setMore(false)} />
+          <div className="sheet-enter pb-safe absolute inset-x-0 bottom-0 mx-auto max-w-xl rounded-t-3xl border-t border-line bg-surface px-4 pt-3">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line-strong" />
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold">Más secciones</p>

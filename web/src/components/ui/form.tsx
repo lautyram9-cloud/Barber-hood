@@ -40,8 +40,8 @@ export function Sheet({ title, onClose, children, footer }: { title: ReactNode; 
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
-      <button className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" aria-hidden="true" tabIndex={-1} onClick={onClose} />
-      <div ref={ref} tabIndex={-1} className="relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface outline-none sm:max-w-lg sm:rounded-3xl">
+      <button className="backdrop-enter absolute inset-0 bg-black/70 backdrop-blur-[2px]" aria-hidden="true" tabIndex={-1} onClick={onClose} />
+      <div ref={ref} tabIndex={-1} className="sheet-enter relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface outline-none sm:max-w-lg sm:rounded-3xl">
         <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0 text-base font-semibold">{title}</div>
           <button onClick={onClose} className="-mr-2 -mt-1 rounded-full p-2 text-muted hover:bg-surface-2 hover:text-fg" aria-label="Cerrar"><X size={18} /></button>
