@@ -60,7 +60,7 @@ se oculta a los barberos). El barbero ve: Turnos, Clientes y Mi perfil, y regist
 | 3g | Stock (inventario, productos, compras, ajustes, pérdidas, proveedores, pedido sugerido) | Hecho |
 | 3h | Dueño, Ajustes (horarios, barberos, comisiones, servicios, respaldo, historial de cambios) y reserva pública `#reservar` | Hecho |
 | 4 | Paridad completa por rol + pruebas manuales en iPhone/iPad reales con usuario de prueba | Pendiente |
-| 5 | Corte: la nueva pasa a la raíz, la estable a `/legacy/`, PWA nueva con versión de caché nueva | Pendiente (requiere aprobación) |
+| 5 | Corte: la nueva pasa a la raíz, la estable a `/legacy/`, PWA nueva con versión de caché nueva | Hecho (2026-11-13, `CORTE_FINAL=true`) |
 | 6 | Mejoras: lectura por rango de fechas, restaurar respaldos, ocultar costos al barbero (SQL aditivo, se muestra antes) | Pendiente |
 
 ## 5. Problemas detectados en la versión estable (para no repetirlos)
