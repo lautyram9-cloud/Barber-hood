@@ -8,15 +8,16 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: 'http://localhost:4173/Barber-hood/next/',
+    baseURL: 'http://localhost:4173/Barber-hood/',
     timezoneId: 'America/Argentina/Salta',
     locale: 'es-AR',
     trace: 'off',
+    serviceWorkers: 'block',
   },
-  // Sirve el build igual que GitHub Pages: legacy en /Barber-hood/ y la nueva en /Barber-hood/next/.
+  // Sirve el build igual que GitHub Pages: la nueva en /Barber-hood/ y la estable en /Barber-hood/legacy/ (corte final).
   webServer: {
     command: 'node tests/e2e/serve-pages.mjs',
-    url: 'http://localhost:4173/Barber-hood/next/',
+    url: 'http://localhost:4173/Barber-hood/',
     reuseExistingServer: !process.env.CI,
   },
   projects: [

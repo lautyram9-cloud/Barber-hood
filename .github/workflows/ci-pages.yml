@@ -5,8 +5,14 @@ name: CI y publicación (GitHub Pages)
 # manual para activar la publicación por Actions sin riesgo).
 #
 # Sitio publicado:
-#   /Barber-hood/        → versión estable (index.html vanilla), copiada SIN cambios
-#   /Barber-hood/next/   → versión nueva (React) en vista previa
+# Dos diseños de sitio, elegidos con la variable del repositorio CORTE_FINAL:
+#   (vacía o distinta de "true") VISTA PREVIA:
+#       /Barber-hood/        → versión estable (index.html vanilla), copiada SIN cambios
+#       /Barber-hood/next/   → versión nueva (React) en vista previa
+#   CORTE_FINAL = "true" CORTE:
+#       /Barber-hood/        → versión nueva (React, PWA con caché bhm-v2)
+#       /Barber-hood/legacy/ → versión estable, copiada SIN cambios
+# Volver atrás = borrar la variable CORTE_FINAL (o ponerla en false) y volver a correr el workflow.
 
 on:
   push:
@@ -56,9 +62,20 @@ jobs:
           npx playwright install --with-deps chromium
           npm run e2e
 
-      - name: Armar sitio (estable en la raíz + nueva en /next/) y verificar integridad
+      - name: Verificar que ambos diseños de sitio se arman bien (integridad)
         working-directory: .
-        run: bash scripts/assemble-pages.sh _site
+        run: |
+          bash scripts/assemble-pages.sh _check-vista vista
+          bash scripts/assemble-pages.sh _check-corte corte
+
+      - name: Armar el sitio a publicar
+        working-directory: .
+        env:
+          CORTE_FINAL: ${{ vars.CORTE_FINAL }}
+        run: |
+          if [ "$CORTE_FINAL" = "true" ]; then MODO=corte; else MODO=vista; fi
+          echo "Modo de publicación: $MODO"
+          bash scripts/assemble-pages.sh _site "$MODO"
 
       - name: Guardar reporte de pruebas si fallan
         if: failure()

@@ -1,5 +1,5 @@
 // Servidor estático mínimo que imita GitHub Pages bajo /Barber-hood/.
-// Sirve la carpeta armada por scripts/assemble-pages.sh (o la arma en memoria: legacy + web/dist).
+// Imita el diseño del CORTE FINAL: la nueva (web/dist) en /Barber-hood/ y la estable en /Barber-hood/legacy/.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -14,7 +14,7 @@ createServer(async (req, res) => {
   if (!p.startsWith(PREFIX)) { res.writeHead(404).end(); return; }
   p = p.slice(PREFIX.length);
   if (p === '' || p.endsWith('/')) p += 'index.html';
-  const file = normalize(p.startsWith('next/') ? join(ROOT, 'web/dist', p.slice(5)) : join(ROOT, p));
+  const file = normalize(p.startsWith('legacy/') ? join(ROOT, p.slice(7)) : join(ROOT, 'web/dist', p));
   if (!file.startsWith(ROOT) || file.includes('node_modules')) { res.writeHead(403).end(); return; }
   try {
     if (!(await stat(file)).isFile()) throw 0;

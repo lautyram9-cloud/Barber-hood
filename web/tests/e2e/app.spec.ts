@@ -68,8 +68,8 @@ test('dueño: Inicio muestra los mismos números que calcula la lógica validada
 test('dueño: siempre tiene a mano la versión estable', async ({ page }) => {
   await login(page, OWNER);
   await page.locator('main h1').first().waitFor();
-  if (isDesktop(page)) await expect(page.locator('aside').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', '../');
-  else { await page.locator('nav[aria-label="Secciones"]').last().getByRole('button', { name: 'Más' }).click(); await expect(page.getByRole('dialog').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', '../'); }
+  if (isDesktop(page)) await expect(page.locator('aside').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', './legacy/');
+  else { await page.locator('nav[aria-label="Secciones"]').last().getByRole('button', { name: 'Más' }).click(); await expect(page.getByRole('dialog').getByRole('link', { name: 'Abrir versión estable' })).toHaveAttribute('href', './legacy/'); }
 });
 
 test('barbero: ve solo sus secciones y NUNCA pide tablas del dueño', async ({ page }) => {
@@ -117,8 +117,8 @@ test('#reservar: el cliente reserva sin login (solo funciones públicas)', async
   expect(log.tables, 'la reserva pública no lee tablas').toEqual([]);
 });
 
-test('la versión estable sigue publicada intacta en la raíz', async ({ request }) => {
-  const res = await request.get('../');
+test('la versión estable sigue publicada intacta en /legacy/', async ({ request }) => {
+  const res = await request.get('legacy/');
   expect(res.status()).toBe(200);
   expect(await res.text()).toBe(readFileSync(new URL('../../../index.html', import.meta.url), 'utf8'));
 });
@@ -132,4 +132,25 @@ test('ninguna sección se desborda hacia los costados', async ({ page }) => {
     const [sw, w] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     expect(sw, `la sección ${r} es más ancha que la pantalla`).toBeLessThanOrEqual(w);
   }
+});
+
+test.describe('PWA (service worker)', () => {
+  test.use({ serviceWorkers: 'allow' });
+  test('registra el worker nuevo (bhm-v2), no guarda datos de Supabase y la estable sigue en /legacy/', async ({ page, context }) => {
+    await login(page, OWNER);
+    await page.locator('main h1').first().waitFor();
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    const info = await page.evaluate(async () => {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const names = await caches.keys();
+      const urls: string[] = [];
+      for (const n of names) for (const r of await (await caches.open(n)).keys()) urls.push(r.url);
+      return { scope: reg?.scope, script: reg?.active?.scriptURL, names, urls };
+    });
+    expect(info.scope).toBe(new URL('./', page.url()).href.split('#')[0]);
+    expect(info.script).toMatch(/\/Barber-hood\/sw\.js$/);
+    expect(info.names).toContain('bhm-v2');
+    expect(info.urls.filter((u) => u.includes('supabase.co')), 'los datos nunca se cachean').toEqual([]);
+    expect(await (await context.request.get('manifest.json')).json()).toMatchObject({ start_url: './', scope: './', display: 'standalone' });
+  });
 });

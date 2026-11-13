@@ -54,7 +54,7 @@ y reserva pública `#reservar`.
 2. **Probar `/next/` con usuarios reales** en iPhone y computadora (dueño y al menos un barbero), con datos de
    prueba que después se anulen. NO se pudo probar desde el entorno de desarrollo: Supabase real, Safari real,
    instalación como app (PWA) y modo sin conexión.
-3. **Corte final** (solo con aprobación): la nueva pasa a la raíz, la estable a `/legacy/`, PWA nueva con
+3. **Corte final**: PREPARADO (ver `docs/PUBLICACION.md`, sección "Corte final"); se activa con la variable `CORTE_FINAL=true` y es reversible. Falta fusionar el PR y activarlo con aprobación del dueño. Antes: los dos primeros puntos.
    service worker y versión de caché nueva. Hasta entonces la nueva NO registra service worker.
 4. Pendientes previos del proyecto: subir los SQL de etapas 3–9 a `supabase/`; confirmar 50/50 en
    `pruebas-supabase.sql`; activar protección de contraseñas filtradas en Supabase Auth.
