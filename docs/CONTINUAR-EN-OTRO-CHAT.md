@@ -1,6 +1,6 @@
 # Rediseño premium de Barber Hood — estado para continuar en otro chat
 
-Actualizado: 2026-11-13. Rama principal: `main` (PR #1 de `redesign-premium` fusionado). CI en verde.
+Actualizado: 2026-11-13. Rama principal: `main` (PR #1 y PR #5 fusionados). CI en verde. **Corte final hecho**: la nueva está en la raíz del sitio y la estable en `/legacy/`.
 
 ## Mensaje para pegar al empezar el chat nuevo
 
@@ -13,10 +13,10 @@ Actualizado: 2026-11-13. Rama principal: `main` (PR #1 de `redesign-premium` fus
 
 | Ruta | Qué es | Estado |
 |---|---|---|
-| `index.html`, `sw.js`, `manifest.json`, íconos (raíz) | Versión **estable** (JS sin framework), la que usa la barbería | Intacta, sin cambios |
+| `index.html`, `sw.js`, `manifest.json`, íconos (raíz) | Versión **estable** (JS sin framework), la que usa la barbería | Sin cambios en el repo; publicada en `/legacy/` desde el corte (copia byte a byte) |
 | `web/` | Versión **nueva** (Vite 8, React 19, TypeScript 5.9, Tailwind 4, supabase-js 2.119, TanStack Query) | **Todas las secciones migradas** |
 | `.github/workflows/ci-pages.yml` | CI/CD: tipos, pruebas, build, e2e, armado del sitio, publicación | Funcionando |
-| `scripts/assemble-pages.sh` | Sitio publicado: estable en `/`, nueva en `/next/` | Funcionando |
+| `scripts/assemble-pages.sh` | Arma el sitio: modo `corte` (nueva en `/`, estable en `/legacy/`, el activo) o `vista` (estable en `/`, nueva en `/next/`) | Funcionando |
 | Tag/rama `backup/legacy-2026-11-12` | Respaldo de la versión estable antes del rediseño | En GitHub (como rama) |
 
 Secciones migradas (mismo orden y visibilidad por rol que la estable): Inicio, Turnos, Clientes, Caja,
@@ -46,20 +46,25 @@ y reserva pública `#reservar`.
 - Accesibilidad: etiquetas visibles en formularios, Escape cierra paneles.
 - Datos en vivo: se recarga solo la tabla que cambió y se escuchan todas las tablas (la estable no escuchaba 6).
 
+## Hecho recientemente
+
+- Publicación por Actions activada (`PAGES_DEPLOY=true`) y vista previa `/next/` probada por el dueño.
+- Transición de desenfoque al cambiar de sección (respeta "reducir movimiento").
+- **Corte final**: variable `CORTE_FINAL=true`; PWA nueva (service worker `bhm-v2`) en la raíz, estable en `/legacy/`.
+  Probado por el dueño. **Volver atrás**: borrar la variable `CORTE_FINAL` y correr el workflow (ver `docs/PUBLICACION.md`).
+- SQL de etapas 3–9 subidos a `supabase/`.
+- `pruebas-supabase.sql`: 46 correctas y 0 con problemas; las pruebas de Caja se omitieron porque había una caja
+  real abierta (mensaje "prueba omitida"). Dan 50 con la caja cerrada.
+
 ## Lo que falta (en este orden)
 
-1. **Activar la publicación por Actions** (pasos en `docs/PUBLICACION.md`): Settings → Pages → Source: GitHub
-   Actions; variable `PAGES_DEPLOY=true`; correr el workflow en `main`. Resultado: estable en
-   `https://lautyram9-cloud.github.io/Barber-hood/` (igual que hoy) y nueva en `…/Barber-hood/next/`.
-2. **Probar `/next/` con usuarios reales** en iPhone y computadora (dueño y al menos un barbero), con datos de
-   prueba que después se anulen. NO se pudo probar desde el entorno de desarrollo: Supabase real, Safari real,
-   instalación como app (PWA) y modo sin conexión.
-3. **Corte final**: PREPARADO (ver `docs/PUBLICACION.md`, sección "Corte final"); se activa con la variable `CORTE_FINAL=true` y es reversible. Falta fusionar el PR y activarlo con aprobación del dueño. Antes: los dos primeros puntos.
-   service worker y versión de caché nueva. Hasta entonces la nueva NO registra service worker.
-4. Pendientes previos del proyecto: subir los SQL de etapas 3–9 a `supabase/`; confirmar 50/50 en
-   `pruebas-supabase.sql`; activar protección de contraseñas filtradas en Supabase Auth.
-5. Mejoras posibles después del corte: lectura por rango de fechas (hoy se lee todo el historial), restaurar
-   respaldos, ocultar costos de productos al barbero (requiere SQL aditivo, mostrarlo antes de ejecutar).
+1. **Repetir `pruebas-supabase.sql` con la caja cerrada** (de noche) y confirmar `Correctas: 50 · Con problemas: 0`.
+2. **Protección de contraseñas filtradas** (Supabase Auth): no disponible en el plan actual (requiere Pro).
+   Mitigación: largo mínimo de contraseña de 10+, exigir tipos de caracteres, claves únicas, desactivar el
+   registro público si no se usa (verificar que no rompa `#reservar`).
+3. Mejoras posibles, en este orden de impacto: lectura por rango de fechas (hoy se lee todo el historial y se
+   enlentece con el tiempo), restaurar respaldos, ocultar costos de productos al barbero (requiere SQL aditivo,
+   mostrarlo antes de ejecutar).
 
 ## Reglas de trabajo del dueño (respetar siempre)
 
