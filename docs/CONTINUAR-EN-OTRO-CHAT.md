@@ -62,9 +62,12 @@ y reserva pública `#reservar`.
 2. **Protección de contraseñas filtradas** (Supabase Auth): no disponible en el plan actual (requiere Pro).
    Mitigación: largo mínimo de contraseña de 10+, exigir tipos de caracteres, claves únicas, desactivar el
    registro público si no se usa (verificar que no rompa `#reservar`).
-3. Mejoras posibles, en este orden de impacto: lectura por rango de fechas (hoy se lee todo el historial y se
-   enlentece con el tiempo), restaurar respaldos, ocultar costos de productos al barbero (requiere SQL aditivo,
-   mostrarlo antes de ejecutar).
+3. **Ocultar costos al barbero** (etapa 11): app lista en el PR; la base necesita DOS scripts en este orden:
+   `supabase/etapa11a-costos-dueno.sql` (ANTES de publicar la app nueva) y `supabase/etapa11b-ocultar-costos.sql`
+   (DESPUÉS de publicarla). Volver atrás: `grant select on public.productos, public.ingresos to authenticated;`.
+   Límite conocido: Realtime no respeta permisos por columna (cerrarlo exige mover los costos a una tabla aparte).
+4. Mejoras posibles, en este orden de impacto: lectura por rango de fechas (hoy se lee todo el historial y se
+   enlentece con el tiempo; umbral sugerido: ~5.000 ingresos).
 
 ## Reglas de trabajo del dueño (respetar siempre)
 

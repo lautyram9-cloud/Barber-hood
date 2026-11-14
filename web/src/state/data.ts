@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAll, rpc, sb } from '@/lib/supabase';
-import type { CajaResumen, TableName } from '@/lib/database.types';
-import { buildAppData } from '@/domain/build';
+import type { CajaResumen, CostosDueno, TableName } from '@/lib/database.types';
+import { buildAppData, mezclarCostos } from '@/domain/build';
 import type { AppData, RawTables } from '@/domain/model';
 
 // Capa de datos. Lee las MISMAS tablas que la versión estable, con la misma paginación,
@@ -34,6 +34,15 @@ export function useAppData(owner: boolean) {
     })),
   });
 
+  // Costos de productos y de ventas: la base solo se los entrega al dueño (RPC costos_dueno, etapa 11).
+  const costos = useQuery({
+    queryKey: ['costos'],
+    queryFn: () => rpc<CostosDueno>('costos_dueno'),
+    enabled: owner,
+    refetchInterval: REFRESH_MS,
+    staleTime: 5_000,
+  });
+
   // Datos en vivo: suscripción a todas las tablas que se leen (la versión estable no
   // escuchaba clientes, turno_items, cajas, caja_mov, comisiones_barbero ni proveedores).
   useEffect(() => {
@@ -44,6 +53,7 @@ export function useAppData(owner: boolean) {
         clearTimeout(timers.get(s.table));
         timers.set(s.table, setTimeout(() => {
           qc.invalidateQueries({ queryKey: tableKey(s.table) });
+          if (s.table == 'productos' || s.table == 'ingresos' || s.table == 'mov_stock') qc.invalidateQueries({ queryKey: ['costos'] });
           qc.invalidateQueries({ queryKey: ['caja_resumen'] });
         }, 500));
       });
@@ -54,18 +64,19 @@ export function useAppData(owner: boolean) {
     return () => { timers.forEach(clearTimeout); sb.removeChannel(ch); removeEventListener('online', online); };
   }, [qc, specs]);
 
-  const error = results.find((r) => r.error)?.error as (Error & { tabla?: string }) | undefined;
-  const ready = results.every((r) => r.data !== undefined);
-  const stamp = results.map((r) => r.dataUpdatedAt).join(',');
+  const errorCostos = costos.error ? Object.assign(new Error('No se pudieron leer los costos (¿falta ejecutar supabase/etapa11a-costos-dueno.sql?)'), { tabla: 'costos' }) : undefined;
+  const error = (results.find((r) => r.error)?.error ?? errorCostos) as (Error & { tabla?: string }) | undefined;
+  const ready = results.every((r) => r.data !== undefined) && (!owner || costos.data !== undefined);
+  const stamp = results.map((r) => r.dataUpdatedAt).join(',') + '|' + costos.dataUpdatedAt;
 
   const data = useMemo<AppData | undefined>(() => {
     if (!ready) return undefined;
     const raw: Record<string, unknown> = {};
     specs.forEach((s, i) => (raw[s.table] = results[i].data));
-    return buildAppData(raw as RawTables);
+    return buildAppData(owner && costos.data ? mezclarCostos(raw as RawTables, costos.data) : (raw as RawTables));
   }, [ready, stamp]);
 
-  return { data, error, loading: !ready && !error, refetch: () => qc.invalidateQueries({ queryKey: ['tabla'] }) };
+  return { data, error, loading: !ready && !error, refetch: () => { qc.invalidateQueries({ queryKey: ['tabla'] }); qc.invalidateQueries({ queryKey: ['costos'] }); } };
 }
 
 /** Resumen de la caja abierta (RPC de solo lectura caja_resumen). Solo dueño. */

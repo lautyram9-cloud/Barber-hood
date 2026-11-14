@@ -20,14 +20,14 @@ export interface Rows {
   horarios: { id: string; desde: string; dia: number; hasta: string };
   ingresos: {
     id: string; barbero_id: string | null; cantidad: number; cliente: string | null; cliente_id: string | null; cobrado: boolean;
-    cobrado_at: string | null; comision_monto: Num | null; comision_pct: Num; concepto: string; costo_unit: Num; creado_por: string | null;
+    cobrado_at: string | null; comision_monto: Num | null; comision_pct: Num; concepto: string; costo_unit?: Num; creado_por: string | null;
     created_at: string; fecha: string; liquidacion_id: string | null; medio_pago: string; op_id: string; precio_unit: Num;
     producto_id: string | null; servicio_id: string | null; tipo: string; total: Num | null; turno_id: string | null;
   };
   liquidaciones: { id: string; adelantos: Num; barbero_id: string; bruto: Num; creado_por: string | null; created_at: string; desde: string | null; fecha: string; hasta: string; medio_pago: string; monto: Num };
   mov_stock: { id: string; cantidad: number; costo_unit: Num | null; creado_por: string | null; created_at: string; fecha: string; ingreso_id: string | null; medio_pago: string; nota: string | null; producto_id: string; proveedor: string | null; proveedor_id: string | null; tipo: string };
   perfiles: { id: string; rol: string };
-  productos: { id: string; activo: boolean; categoria: string | null; comision_pct: Num; costo: Num; nombre: string; precio: Num; proveedor_id: string | null; stock: number; stock_min: number };
+  productos: { id: string; activo: boolean; categoria: string | null; comision_pct: Num; costo?: Num; nombre: string; precio: Num; proveedor_id: string | null; stock: number; stock_min: number };
   proveedores: { id: string; activo: boolean; nombre: string; notas: string | null; telefono: string | null };
   servicios: { id: string; activo: boolean; comision_pct: Num; duracion_min: number | null; nombre: string; precio: Num };
   turno_items: { servicio_id: string; turno_id: string };
@@ -38,6 +38,9 @@ export interface Rows {
 }
 
 export type TableName = keyof Rows;
+
+/** Respuesta de la RPC costos_dueno (solo dueño): los costos, que a los barberos la base no les muestra. */
+export interface CostosDueno { productos: { id: string; costo: Num }[]; ingresos: { id: string; costo_unit: Num }[] }
 
 /** Respuesta de la RPC caja_resumen (mismas claves que usa la versión estable). */
 export interface CajaResumen {

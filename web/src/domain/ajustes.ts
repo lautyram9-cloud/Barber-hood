@@ -1,4 +1,5 @@
-import type { AppData, Horario, Movimiento } from './model';
+import type { AppData, Horario, Movimiento, RawTables } from './model';
+import { mezclarCostos } from './build';
 import { formatoPesos as fmt, horarioSemanal, sumMonto, today } from './logic';
 import type { Db } from './turnos';
 
@@ -59,9 +60,11 @@ export const quitarServicio = (db: Db, id: string) => ok(db.from('servicios').up
 // ---------- Respaldo e historial ----------
 export const TABLAS_RESPALDO = ['barberos', 'servicios', 'productos', 'proveedores', 'horarios', 'clientes', 'turnos', 'turno_items', 'ingresos', 'gastos', 'liquidaciones', 'adelantos', 'asistencia', 'mov_stock', 'cajas', 'caja_mov', 'comisiones_barbero', 'dueno_mov'] as const;
 /** Copia de seguridad completa (mismo formato JSON que la versión estable). */
-export async function generarRespaldo(leer: (tabla: string, orden?: string[]) => Promise<unknown[]>) {
+export async function generarRespaldo(leer: (tabla: string, orden?: string[]) => Promise<unknown[]>, costos?: Parameters<typeof mezclarCostos>[1]) {
   const o: Record<string, unknown> = { fecha: new Date().toISOString(), version: 1 };
   for (const t of TABLAS_RESPALDO) o[t] = await leer(t, t == 'turno_items' ? ['turno_id', 'servicio_id'] : undefined);
+  // La base no entrega los costos con las tablas: la copia del dueño los incluye para poder restaurarlos.
+  if (costos) Object.assign(o, mezclarCostos(o as RawTables, costos));
   return { nombre: 'barberhood-copia-' + today() + '.json', texto: JSON.stringify(o) };
 }
 
