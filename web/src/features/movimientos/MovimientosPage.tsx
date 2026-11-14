@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Clock, Trash2 } from 'lucide-react';
+import { Banknote, ChevronRight, Clock, CreditCard, Landmark, Trash2 } from 'lucide-react';
 import type { AppData, Movimiento } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as M from '@/domain/movimientos';
 import { sb } from '@/lib/supabase';
 import { usePeriod } from '@/state/period';
+import { useSession } from '@/state/session';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
@@ -19,6 +20,8 @@ export function MovimientosPage({ d }: { d: AppData }) {
   const [a, b] = L.rango(per, ref), r = M.resumenMovimientos(d, a, b);
   const com = M.comisionesPeriodo(d, a, b).filter((x) => x.comision > 0), pen = M.pendientesCobro(d), lista = M.movimientosPeriodo(d, a, b);
   const [cobrar, setCobrar] = useState<Movimiento | null>(null);
+  const [verId, setVerId] = useState<string | null>(null);
+  const ver = verId ? d.movs.find((x) => x.id == verId) : undefined;
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -32,7 +35,7 @@ export function MovimientosPage({ d }: { d: AppData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="space-y-4 lg:col-span-2 lg:space-y-6">
           <Card title="Movimientos del período">
-            {lista.length ? lista.map((m) => <FilaMovimiento key={m.id} d={d} m={m} />) : <Empty>Sin movimientos.</Empty>}
+            {lista.length ? lista.map((m) => <FilaMovimiento key={m.id} d={d} m={m} onAbrir={() => setVerId(m.id)} />) : <Empty>Sin movimientos.</Empty>}
           </Card>
         </div>
         <div className="space-y-4 lg:space-y-6">
@@ -53,33 +56,84 @@ export function MovimientosPage({ d }: { d: AppData }) {
           <Registrar d={d} />
         </div>
       </div>
+      {ver && <DetalleMovimiento d={d} m={ver} onClose={() => setVerId(null)} />}
       {cobrar && <CobrarPendiente m={cobrar} onClose={() => setCobrar(null)} />}
     </div>
   );
 }
 
-function FilaMovimiento({ d, m }: { d: AppData; m: Movimiento }) {
+const ICONO_MEDIO: Record<string, typeof Banknote> = { efectivo: Banknote, transferencia: Landmark, tarjeta: CreditCard };
+
+/** Distintivo del medio de pago (o "Sin cobrar" si el ingreso todavía no se cobró). */
+function Medio({ m }: { m: Movimiento }) {
+  const pendiente = m.tipo == 'ing' && !m.cobrado;
+  const Icono = pendiente ? Clock : ICONO_MEDIO[m.medioPago] ?? Banknote;
+  return (
+    <span className={cx('inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
+      pendiente ? 'bg-warn/15 text-warn' : m.medioPago == 'transferencia' ? 'bg-accent/15 text-accent' : m.medioPago == 'tarjeta' ? 'bg-fg/10 text-fg' : 'bg-ok/10 text-ok')}>
+      <Icono size={12} />{pendiente ? 'Sin cobrar' : M.etiquetaMedio(m.medioPago)}
+    </span>
+  );
+}
+
+function FilaMovimiento({ d, m, onAbrir }: { d: AppData; m: Movimiento; onAbrir(): void }) {
+  const ed = M.editable(m, true);
+  const { run, ocupado } = useAccion();
+  const { confirmar } = useFeedback();
+  const borrar = () => anularMovimiento(m, confirmar, run);
+  return (
+    <div className="flex items-center gap-2 border-t border-line first:border-t-0">
+      <button onClick={onAbrir} aria-label={`Ver detalle de ${m.concepto}`} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left">
+        <span className="num w-11 shrink-0 text-xs text-subtle">{m.fecha.slice(8)}/{m.fecha.slice(5, 7)}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm">{m.concepto}</span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted"><Medio m={m} /><span>{M.detalleFila(d, m)}</span></span>
+        </span>
+        <span className={cx('num shrink-0 text-sm font-medium', m.tipo == 'ing' ? 'text-ok' : 'text-ko')}>{m.tipo == 'gas' ? '-' : ''}{fmt(m.monto)}</span>
+        <ChevronRight size={16} className="shrink-0 text-subtle" aria-hidden="true" />
+      </button>
+      {ed && <button onClick={borrar} disabled={ocupado} aria-label={`${m.tipo == 'ing' ? 'Anular' : 'Borrar'} ${m.concepto}`} className="rounded-lg p-2 text-subtle hover:bg-ko/10 hover:text-ko"><Trash2 size={16} /></button>}
+    </div>
+  );
+}
+
+type Confirmar = ReturnType<typeof useFeedback>['confirmar'];
+type Run = ReturnType<typeof useAccion>['run'];
+const TABLAS_MOV = ['ingresos', 'gastos', 'productos', 'mov_stock'] as const;
+/** Pide confirmación y anula el ingreso / borra el gasto. Devuelve true si se hizo. */
+async function anularMovimiento(m: Movimiento, confirmar: Confirmar, run: Run) {
+  if (!(await confirmar({ titulo: m.tipo == 'ing' ? '¿Anular este ingreso?' : '¿Borrar este gasto?', texto: `${m.concepto} · ${fmt(m.monto)} · ${m.fecha}${m.tipo == 'ing' && m.productoId ? '. El stock vendido se devuelve.' : ''}`, accion: m.tipo == 'ing' ? 'Anular' : 'Borrar', peligro: true }))) return false;
+  return run(async () => { await M.anular(sb, M.tablaDe(m), m.id); return m.tipo == 'ing' ? 'Ingreso anulado' : 'Gasto borrado'; }, [...TABLAS_MOV]);
+}
+
+/** Ventana con todo el detalle de un movimiento: quién lo cargó, cuándo, medio de pago, etc. */
+function DetalleMovimiento({ d, m, onClose }: { d: AppData; m: Movimiento; onClose(): void }) {
+  const { session } = useSession();
+  const miUser = session.status == 'ready' ? session.userId : null;
   const ed = M.editable(m, true);
   const { run, ocupado } = useAccion();
   const { confirmar, toast } = useFeedback();
-  const tabla = M.tablaDe(m), tablas = ['ingresos', 'gastos', 'productos', 'mov_stock'] as const;
-  const borrar = async () => {
-    if (!(await confirmar({ titulo: m.tipo == 'ing' ? '¿Anular este ingreso?' : '¿Borrar este gasto?', texto: `${m.concepto} · ${fmt(m.monto)} · ${m.fecha}${m.tipo == 'ing' && m.productoId ? '. El stock vendido se devuelve.' : ''}`, accion: m.tipo == 'ing' ? 'Anular' : 'Borrar', peligro: true }))) return;
-    run(async () => { await M.anular(sb, tabla, m.id); return m.tipo == 'ing' ? 'Ingreso anulado' : 'Gasto borrado'; }, [...tablas]);
-  };
-  const fecha = (f: string) => f && run(async () => { try { await M.cambiarFecha(sb, tabla, m.id, f); } catch { toast('No se pudo cambiar la fecha'); } }, [...tablas]);
+  const fecha = (f: string) => f && run(async () => { try { await M.cambiarFecha(sb, M.tablaDe(m), m.id, f); } catch { toast('No se pudo cambiar la fecha'); } }, [...TABLAS_MOV]);
   return (
-    <div className="flex items-center gap-3 border-t border-line py-2.5 first:border-t-0">
-      {ed
-        ? <input type="date" aria-label={`Fecha de ${m.concepto}`} defaultValue={m.fecha} disabled={ocupado} onChange={(e) => fecha(e.target.value)} className="num h-9 w-[8.5rem] shrink-0 rounded-lg border border-line bg-bg px-2 text-xs text-muted" />
-        : <span className="num w-12 shrink-0 text-xs text-subtle">{m.fecha.slice(5)}</span>}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{m.concepto}</p>
-        <p className="truncate text-xs text-muted">{M.detalleMovimiento(d, m)}</p>
+    <Sheet title={m.concepto} onClose={onClose}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className={cx('num text-2xl font-semibold', m.tipo == 'ing' ? 'text-ok' : 'text-ko')}>{m.tipo == 'gas' ? '-' : ''}{fmt(m.monto)}</p>
+        <Medio m={m} />
       </div>
-      <p className={cx('num shrink-0 text-sm font-medium', m.tipo == 'ing' ? 'text-ok' : 'text-ko')}>{m.tipo == 'gas' ? '-' : ''}{fmt(m.monto)}</p>
-      {ed && <button onClick={borrar} disabled={ocupado} aria-label={`${m.tipo == 'ing' ? 'Anular' : 'Borrar'} ${m.concepto}`} className="rounded-lg p-2 text-subtle hover:bg-ko/10 hover:text-ko"><Trash2 size={16} /></button>}
-    </div>
+      <dl className="divide-y divide-line rounded-xl border border-line px-3">
+        {M.detalleCompleto(d, m, miUser).map(([k, v]) => (
+          <div key={k} className="flex items-start justify-between gap-4 py-2.5 text-sm"><dt className="shrink-0 text-muted">{k}</dt><dd className="text-right">{v}</dd></div>
+        ))}
+      </dl>
+      {ed && (
+        <div className="mt-5 space-y-3">
+          <Field label="Cambiar la fecha del movimiento">{(id) => <Input id={id} type="date" defaultValue={m.fecha} disabled={ocupado} onChange={(e) => fecha(e.target.value)} />}</Field>
+          <Button variant="outline" className="w-full text-ko" disabled={ocupado} onClick={async () => { if (await anularMovimiento(m, confirmar, run)) onClose(); }}>
+            <Trash2 size={16} /> {m.tipo == 'ing' ? 'Anular ingreso' : 'Borrar gasto'}
+          </Button>
+        </div>
+      )}
+    </Sheet>
   );
 }
 

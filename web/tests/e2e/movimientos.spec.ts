@@ -109,3 +109,54 @@ test('Movimientos: indicadores, anular con confirmación, cobrar pendiente y reg
   await expect(page.getByRole('status').filter({ hasText: 'Guardado' })).toBeVisible();
   expect(log.bodies.at(-1)).toEqual({ op: 'POST gastos', body: { fecha: HOY, tipo: 'variable', concepto: 'Insumos', monto: 8000 }, query: '' });
 });
+
+test.describe('Movimientos: detalle de cada movimiento', () => {
+  const [a, b] = L.rango('sem', HOY);
+  const objetivo = M.movimientosPeriodo(D, a, b).find((m) => m.tipo == 'ing' && M.editable(m, true))!;
+  // Un ingreso conocido: transferencia, cargado por el dueño a las 14:05 (hora de Salta).
+  const datos = { ...DATA, ingresos: DATA.ingresos!.map((i) => (i.id == objetivo.id
+    ? { ...i, medio_pago: 'transferencia', cobrado: true, cobrado_at: null, creado_por: OWNER.id, created_at: '2026-11-12T14:05:00-03:00', turno_id: null, cantidad: 1 } : i)) };
+
+  test('la fila muestra el medio de pago y al tocarla abre el detalle', async ({ page }) => {
+    await entrar(page, OWNER, 'caja', datos);
+    const fila = page.getByRole('button', { name: `Ver detalle de ${objetivo.concepto}` }).filter({ hasText: fmt(objetivo.monto) }).first();
+    await expect(page.locator('main').getByText('Transferencia').first(), 'distintivo del medio en la lista').toBeVisible();
+    await page.getByRole('button', { name: new RegExp(`Ver detalle de ${objetivo.concepto}`) }).first().waitFor();
+    // abrimos justo el movimiento conocido (el único con transferencia cargada por 'usr-owner')
+    const conocido = page.getByRole('button', { name: new RegExp(`Ver detalle de ${objetivo.concepto}`) }).filter({ hasText: 'Transferencia' }).first();
+    await (await conocido.count() ? conocido : fila).click();
+    const dlg = page.getByRole('dialog');
+    await expect(dlg).toContainText(objetivo.concepto);
+    await expect(dlg).toContainText(fmt(objetivo.monto));
+    await expect(dlg).toContainText('Medio de pago');
+    await expect(dlg).toContainText('Cargado por');
+    await expect(dlg).toContainText('Fecha del movimiento');
+  });
+
+  test('muestra quién lo cargó, el día y la hora y el medio de pago exactos', async ({ page }) => {
+    await entrar(page, OWNER, 'caja', datos);
+    // el único movimiento cargado por 'usr-owner' es el conocido: "Vos"
+    await page.getByRole('button', { name: /Ver detalle de/ }).filter({ hasText: 'Transferencia' }).first().click();
+    const dlg = page.getByRole('dialog');
+    const fila = (k: string) => dlg.locator('dt', { hasText: new RegExp(`^${k}$`) }).locator('xpath=following-sibling::dd');
+    await expect(fila('Cargado por')).toHaveText('Vos');
+    await expect(fila('Cargado')).toContainText('14:05');
+    await expect(fila('Cargado')).toContainText('12');
+    await expect(fila('Medio de pago')).toHaveText('Transferencia');
+    await page.keyboard.press('Escape');
+    await expect(dlg).toBeHidden();
+  });
+
+  test('desde el detalle se cambia la fecha y se anula con confirmación', async ({ page }) => {
+    const log = await entrar(page, OWNER, 'caja', datos, { 'PATCH ingresos': '', 'rpc anular_ingreso': null });
+    await page.getByRole('button', { name: /Ver detalle de/ }).filter({ hasText: 'Transferencia' }).first().click();
+    const dlg = page.getByRole('dialog');
+    await dlg.getByLabel('Cambiar la fecha del movimiento').fill('2026-11-10');
+    await expect.poll(() => log.bodies.map((x) => x.op)).toContain('PATCH ingresos');
+    expect(log.bodies.find((x) => x.op == 'PATCH ingresos')).toMatchObject({ body: { fecha: '2026-11-10' }, query: `?id=eq.${objetivo.id}` });
+    await dlg.getByRole('button', { name: 'Anular ingreso' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Anular' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Ingreso anulado' })).toBeVisible();
+    expect(log.bodies.at(-1)).toMatchObject({ op: 'rpc anular_ingreso', body: { p_id: objetivo.id } });
+  });
+});

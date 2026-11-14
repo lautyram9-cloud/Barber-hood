@@ -1,5 +1,5 @@
 import type { AppData, Movimiento } from './model';
-import { nombreBarbero, sumMonto, today } from './logic';
+import { formatoPesos, nombreBarbero, sumMonto, today } from './logic';
 import type { Db } from './turnos';
 
 // Botón + (A.fab / qsave / qsg) y sección Movimientos (V.caja / addmov / pcard / pcob / del).
@@ -47,6 +47,42 @@ export function detalleMovimiento(d: AppData, m: Movimiento) {
   const p = [m.categoria, nombreBarbero(d, m.barberoId)].filter(Boolean).join(' ');
   return [p, m.tipo == 'ing' && m.comisionMonto ? `com. $${Math.round(m.comisionMonto).toLocaleString('es-AR')}` : '', m.liquidacionId ? 'liquidado' : '',
     m.tipo == 'ing' && !m.cobrado ? 'sin cobrar' : '', m.medioPago && m.medioPago != 'efectivo' ? m.medioPago : ''].filter(Boolean).join(' · ');
+}
+
+/** Etiqueta legible del medio de pago. */
+export const etiquetaMedio = (medio: string) => MEDIOS.find(([v]) => v == medio)?.[1] ?? (medio ? medio[0].toUpperCase() + medio.slice(1) : 'Efectivo');
+/** Como detalleMovimiento pero sin cobro ni medio de pago: la fila los muestra aparte, con un distintivo. */
+export function detalleFila(d: AppData, m: Movimiento) {
+  const p = [m.categoria, nombreBarbero(d, m.barberoId)].filter(Boolean).join(' ');
+  return [p, m.tipo == 'ing' && m.comisionMonto ? `com. $${Math.round(m.comisionMonto).toLocaleString('es-AR')}` : '', m.liquidacionId ? 'liquidado' : ''].filter(Boolean).join(' · ');
+}
+/** Quién lo cargó: "Vos" si es el usuario actual, el barbero vinculado a ese usuario, "Dueño" si no, o "Sistema" si la base no lo registró. */
+export function quienCargo(d: AppData, m: Movimiento, miUserId: string | null) {
+  if (!m.creadoPor) return 'Sistema';
+  if (m.creadoPor == miUserId) return 'Vos';
+  return d.barberosTodos.find((b) => b.user_id == m.creadoPor)?.nombre ?? 'Dueño';
+}
+const cuando = (ts: number) => (ts ? new Date(ts).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
+/** Filas de la ventana de detalle de un movimiento (etiqueta, valor). Solo las que tienen dato. */
+export function detalleCompleto(d: AppData, m: Movimiento, miUserId: string | null): [string, string][] {
+  const ing = m.tipo == 'ing';
+  const cant = m.cantidad && m.cantidad > 1 ? `${m.cantidad} × ${formatoPesos(m.monto / m.cantidad)}` : '';
+  const cobro = ing && m.cobrado && m.cobradoAt && m.cobradoAt - m.ts > 60_000 ? cuando(m.cobradoAt) : '';
+  const filas: [string, string][] = [
+    ['Tipo', ing ? `Ingreso · ${m.categoria}` : `Gasto ${m.categoria}`],
+    ['Medio de pago', ing && !m.cobrado ? `${etiquetaMedio(m.medioPago)} (sin cobrar)` : etiquetaMedio(m.medioPago)],
+    ['Fecha del movimiento', m.fecha.split('-').reverse().join('/')],
+    ['Cargado', cuando(m.ts)],
+    ['Cargado por', quienCargo(d, m, miUserId)],
+    ['Cobrado', cobro],
+    ['Barbero', ing ? nombreBarbero(d, m.barberoId) || 'Sin barbero' : ''],
+    ['Cliente', m.cliente ?? ''],
+    ['Cantidad', cant],
+    ['Comisión del barbero', ing && m.comisionMonto ? formatoPesos(m.comisionMonto) : ''],
+    ['Origen', m.turnoId ? 'Cobro de un turno' : ''],
+    ['Liquidación', m.liquidacionId ? 'Ya liquidado: no se puede cambiar ni anular' : ''],
+  ];
+  return filas.filter((f) => f[1]);
 }
 
 // ---------- Registro ----------
