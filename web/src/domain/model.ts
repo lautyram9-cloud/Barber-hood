@@ -35,6 +35,10 @@ export interface Movimiento {
   cobradoAt?: number;
   medioPago: string;
   ts: number;
+  /** Usuario (auth) que lo cargó, si la base lo registró. */
+  creadoPor?: string | null;
+  /** Turno del que viene el cobro, si lo hay. */
+  turnoId?: string | null;
 }
 
 export type EstadoTurno = 'pendiente' | 'confirmado' | 'atendido' | 'cancelado' | 'ausente' | string;
