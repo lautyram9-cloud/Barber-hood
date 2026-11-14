@@ -7,10 +7,19 @@ import type { Rows, TableName } from './database.types';
 export const sb = createClient(SUPABASE.url, SUPABASE.key);
 
 /** Lectura paginada de a 1000 filas: equivalente a fa() de la versión estable. */
+/**
+ * Columnas que se piden de las tablas con costos. Nunca '*': a los barberos la base no les muestra
+ * productos.costo ni ingresos.costo_unit (etapa 11), y pedir '*' fallaría. El dueño los recibe aparte (costos_dueno).
+ */
+export const COLUMNAS: Partial<Record<TableName, string>> = {
+  productos: 'id,activo,categoria,comision_pct,nombre,precio,proveedor_id,stock,stock_min',
+  ingresos: 'id,barbero_id,cantidad,cliente,cliente_id,cobrado,cobrado_at,comision_monto,comision_pct,concepto,creado_por,created_at,fecha,liquidacion_id,medio_pago,op_id,precio_unit,producto_id,servicio_id,tipo,total,turno_id',
+};
+
 export async function fetchAll<T extends TableName>(table: T, orderBy: string[] = ['id']): Promise<Rows[T][]> {
   const out: Rows[T][] = [];
   for (let from = 0; ; from += 1000) {
-    let q = sb.from(table).select('*');
+    let q = sb.from(table).select(COLUMNAS[table] ?? '*');
     for (const c of orderBy) q = q.order(c);
     const { data, error } = await q.range(from, from + 999);
     if (error) throw Object.assign(new Error(error.message), { tabla: table, code: error.code });

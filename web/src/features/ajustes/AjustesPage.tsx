@@ -4,14 +4,14 @@ import { Download, History, LogOut, Trash2, Upload } from 'lucide-react';
 import type { AppData, Barbero } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
-import { fetchAll, sb } from '@/lib/supabase';
+import { fetchAll, rpc, sb } from '@/lib/supabase';
 import { guardarArchivo } from '@/lib/files';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { tableKey } from '@/state/data';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Row } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
-import type { TableName } from '@/lib/database.types';
+import type { CostosDueno, TableName } from '@/lib/database.types';
 
 const fmt = L.formatoPesos;
 const instalada = () => (navigator as Navigator & { standalone?: boolean }).standalone || matchMedia?.('(display-mode: standalone)').matches;
@@ -43,7 +43,7 @@ export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email:
     } finally { setRestaurando(false); if (fileRef.current) fileRef.current.value = ''; }
   };
   const backup = async () => {
-    try { const r = await A.generarRespaldo((t, o) => fetchAll(t as TableName, o)); await guardarArchivo(r.nombre, 'application/json', r.texto, false); toast('Copia lista'); }
+    try { const r = await A.generarRespaldo((t, o) => fetchAll(t as TableName, o), await rpc<CostosDueno>('costos_dueno')); await guardarArchivo(r.nombre, 'application/json', r.texto, false); toast('Copia lista'); }
     catch { toast('No se pudo generar la copia'); }
   };
   return (

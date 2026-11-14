@@ -154,3 +154,35 @@ test.describe('PWA (service worker)', () => {
     expect(await (await context.request.get('manifest.json')).json()).toMatchObject({ start_url: './', scope: './', display: 'standalone' });
   });
 });
+
+test.describe('costos solo para el dueño (etapa 11)', () => {
+  test('el dueño no pide las columnas de costo a las tablas; las recibe por costos_dueno', async ({ page }) => {
+    const log = await login(page, OWNER);
+    await page.locator('main h1').first().waitFor();
+    expect(log.selects.productos).not.toMatch(/(^|,)(\*|costo)(,|$)/);
+    expect(log.selects.ingresos).not.toMatch(/(^|,)(\*|costo_unit)(,|$)/);
+    expect(log.rpcs).toContain('costos_dueno');
+  });
+
+  test('la copia de seguridad del dueño conserva los costos', async ({ page }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'descarga en escritorio');
+    await login(page, OWNER);
+    await page.locator('main h1').first().waitFor();
+    await page.goto('#/aj');
+    await page.locator('main h1').first().waitFor();
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Descargar copia de seguridad' }).click()]);
+    const j = JSON.parse(await (await import('node:fs/promises')).readFile(await dl.path(), 'utf8'));
+    const real = DATA.productos!.find((p) => p.id == j.productos[0].id)!;
+    expect(+j.productos[0].costo, 'la copia conserva el costo del producto').toBe(+(real.costo as number));
+    const conCosto = DATA.ingresos!.find((i) => +(i.costo_unit as number) > 0)!;
+    expect(+j.ingresos.find((i: { id: string }) => i.id == conCosto.id).costo_unit, 'y el costo de lo vendido').toBe(+(conCosto.costo_unit as number));
+  });
+
+  test('un barbero nunca pide ni recibe costos', async ({ page }) => {
+    const log = await login(page, BARBER);
+    await page.locator('main h1').first().waitFor();
+    expect(log.rpcs).not.toContain('costos_dueno');
+    expect(log.selects.productos).not.toMatch(/(^|,)(\*|costo)(,|$)/);
+    expect(log.selects.ingresos).not.toMatch(/(^|,)(\*|costo_unit)(,|$)/);
+  });
+});

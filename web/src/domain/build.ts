@@ -1,5 +1,11 @@
 import type { AppData, Horario, RawTables, Turno } from './model';
 
+/** Vuelve a poner los costos (que la base solo entrega al dueño por costos_dueno) en las filas de productos e ingresos. */
+export function mezclarCostos<T extends RawTables>(raw: T, c: { productos: { id: string; costo: number | string }[]; ingresos: { id: string; costo_unit: number | string }[] }): T {
+  const cp = new Map(c.productos.map((x) => [x.id, x.costo])), ci = new Map(c.ingresos.map((x) => [x.id, x.costo_unit]));
+  return { ...raw, productos: raw.productos?.map((p) => ({ ...p, costo: cp.get(p.id) ?? 0 })), ingresos: raw.ingresos?.map((i) => ({ ...i, costo_unit: ci.get(i.id) ?? 0 })) };
+}
+
 const tm = (x: string | null | undefined) => Date.parse(x ?? '') || 0;
 const h5 = (t: string | null | undefined) => (t || '').slice(0, 5);
 
@@ -33,11 +39,11 @@ export function buildAppData(r: RawTables): AppData {
     horario,
     comisionesBarbero: (r.comisiones_barbero ?? []).map((x) => ({ id: x.id, barberoId: x.barbero_id, servicioId: x.servicio_id, productoId: x.producto_id, pct: +x.pct })),
     clientes: (r.clientes ?? []).map((x) => ({ id: x.id, nombre: x.nombre, telefono: x.telefono || '', preferencias: x.preferencias || '', observaciones: x.observaciones || '', creado: x.created_at || '' })),
-    productos: pr.filter((x) => x.activo).map((x) => ({ id: x.id, nombre: x.nombre, categoria: x.categoria, costo: +x.costo, precio: +x.precio, stock: x.stock, stockMin: x.stock_min, comisionPct: +x.comision_pct, proveedorId: x.proveedor_id || '' })),
+    productos: pr.filter((x) => x.activo).map((x) => ({ id: x.id, nombre: x.nombre, categoria: x.categoria, costo: +(x.costo ?? 0), precio: +x.precio, stock: x.stock, stockMin: x.stock_min, comisionPct: +x.comision_pct, proveedorId: x.proveedor_id || '' })),
     movs: [
       ...ing.map((x) => ({
         id: x.id, tipo: 'ing' as const, categoria: x.tipo, concepto: x.concepto, monto: +(x.total as number), cantidad: x.cantidad, barberoId: x.barbero_id || '',
-        cliente: x.cliente || '', clienteId: x.cliente_id || '', fecha: x.fecha, costoUnit: +x.costo_unit, comisionMonto: +(x.comision_monto as number),
+        cliente: x.cliente || '', clienteId: x.cliente_id || '', fecha: x.fecha, costoUnit: +(x.costo_unit ?? 0), comisionMonto: +(x.comision_monto as number),
         liquidacionId: x.liquidacion_id, productoId: x.producto_id, cobrado: x.cobrado !== false, cobradoAt: tm(x.cobrado_at || x.created_at), medioPago: x.medio_pago, ts: tm(x.created_at),
         creadoPor: x.creado_por, turnoId: x.turno_id,
       })),
