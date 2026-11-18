@@ -109,3 +109,14 @@ test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nun
     expect(log.bodies).toEqual([]);
   });
 });
+
+test('Ajustes: tarjeta de avisos de reservas explica qué falta en cada dispositivo', async ({ page }, info) => {
+  await entrar(page, 'aj', {});
+  const card = page.locator('main section', { hasText: 'Avisos de reservas' });
+  await expect(card).toBeVisible();
+  // En iPhone/iPad emulado la app no está "instalada": pide agregarla a la pantalla de inicio.
+  // En escritorio las pruebas bloquean el service worker: pide reabrir la app.
+  if (info.project.name == 'escritorio') await expect(card).toContainText('cerrala y abrila de nuevo');
+  else await expect(card).toContainText('Agregar a pantalla de inicio');
+  await expect(card.getByRole('button', { name: /Activar avisos/ })).toHaveCount(0);
+});

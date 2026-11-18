@@ -58,6 +58,13 @@ y reserva pública `#reservar`.
 
 ## Lo que falta (en este orden)
 
+0. **Avisos push de reservas** (etapa 12, preparada, sin activar). Orden:
+   (1) desplegar la función `supabase/functions/notificar-turno` (`index.ts` + `avisos.ts`) con "Verify JWT"
+   DESACTIVADO; (2) ejecutar `supabase/etapa12-avisos-push.sql`; (3) publicar la app; (4) en cada dispositivo:
+   Ajustes → Avisos de reservas → Activar (en iPhone, con la app instalada en la pantalla de inicio).
+   Avisa al dueño y al barbero asignado; no incluye el teléfono; máx. 20 avisos por hora; un aviso por turno.
+   Las claves VAPID se generan solas y viven en `push_config` (solo el servidor la lee).
+   Volver atrás: `drop trigger if exists t_avisar_turno on public.turnos;`.
 1. **Repetir `pruebas-supabase.sql` con la caja cerrada** (de noche) y confirmar `Correctas: 50 · Con problemas: 0`.
 2. **Protección de contraseñas filtradas** (Supabase Auth): no disponible en el plan actual (requiere Pro).
    Mitigación: largo mínimo de contraseña de 10+, exigir tipos de caracteres, claves únicas, desactivar el
