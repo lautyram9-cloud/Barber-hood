@@ -17,7 +17,8 @@ export const SECTIONS: Section[] = [
   { id: 'me', label: 'Mi perfil', icon: UserRound, vis: 'barber', migrated: true },
   { id: 'com', label: 'Comisiones', icon: HandCoins, vis: 'owner', migrated: true },
   { id: 'due', label: 'Dueño', icon: Crown, vis: 'owner', migrated: true },
-  { id: 'aj', label: 'Ajustes', icon: Settings, vis: 'owner', migrated: true },
+  // Cambio intencional respecto de la estable: el barbero también tiene Ajustes (su cuenta y sus avisos).
+  { id: 'aj', label: 'Ajustes', icon: Settings, vis: 'all', migrated: true },
 ];
 
 export function sectionsFor(owner: boolean, isBarber: boolean) {

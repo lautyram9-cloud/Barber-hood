@@ -14,7 +14,7 @@ describe('navegación por rol', () => {
   it('dueño: mismas secciones que la versión estable', () => {
     expect(sectionsFor(true, false).map((s) => [s.id, s.label])).toEqual(legacyTabs(true, false));
   });
-  it('barbero: mismas secciones que la versión estable', () => {
-    expect(sectionsFor(false, true).map((s) => [s.id, s.label])).toEqual(legacyTabs(false, true));
+  it('barbero: mismas secciones que la versión estable, más Ajustes (cambio intencional: cuenta y avisos)', () => {
+    expect(sectionsFor(false, true).map((s) => [s.id, s.label])).toEqual([...legacyTabs(false, true), ['aj', 'Ajustes']]);
   });
 });

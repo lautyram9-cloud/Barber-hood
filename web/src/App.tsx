@@ -54,7 +54,7 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   else if (current.id === 'com') body = <ComisionesPage d={data} />;
   else if (current.id === 'stk') body = <StockPage d={data} />;
   else if (current.id === 'due') body = <DuenoPage d={data} />;
-  else if (current.id === 'aj') body = <AjustesPage d={data} email={email} owner={owner} onSignOut={onSignOut} />;
+  else if (current.id === 'aj') body = <AjustesPage d={data} email={email} owner={owner} me={me} onSignOut={onSignOut} />;
   else if (current.id === 'cj') body = <CajaPage d={data} />;
   else if (current.id === 'caja') body = <MovimientosPage d={data} />;
   else if (current.id === 'est') body = <EstadisticasPage d={data} />;

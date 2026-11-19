@@ -20,7 +20,8 @@ const fmt = L.formatoPesos;
 const instalada = () => (navigator as Navigator & { standalone?: boolean }).standalone || matchMedia?.('(display-mode: standalone)').matches;
 
 /** Ajustes (V.aj): cuenta, copias, disponibilidad, barberos/comisiones y servicios. */
-export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email: string; owner: boolean; onSignOut(): void }) {
+export function AjustesPage({ d, email, owner, me = null, onSignOut }: { d: AppData; email: string; owner: boolean; me?: string | null; onSignOut(): void }) {
+  const yo = me ? d.barberosTodos.find((b) => b.id == me) : undefined;
   const [aud, setAud] = useState(false);
   const { toast, confirmar } = useFeedback();
   const qc = useQueryClient();
@@ -54,7 +55,13 @@ export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email:
       <PageHeader title="Ajustes" />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Cuenta">
-          <p className="text-sm">{email}</p><p className="mb-3 text-xs text-muted">{owner ? 'Dueño' : 'Barbero'}</p>
+          <div className="mb-3 flex items-center gap-3">
+            {yo && <Avatar nombre={yo.nombre} foto={yo.foto} size={48} />}
+            <div className="min-w-0">
+              {yo && <p className="truncate text-sm font-medium">{yo.nombre}</p>}
+              <p className="truncate text-sm">{email}</p><p className="text-xs text-muted">{owner ? 'Dueño' : 'Barbero'}</p>
+            </div>
+          </div>
           {!instalada() && <p className="mb-3 text-xs text-subtle">Para instalarla: Compartir → Agregar a pantalla de inicio.</p>}
           <Button variant="outline" onClick={onSignOut}><LogOut size={16} /> Cerrar sesión</Button>
         </Card>
@@ -70,17 +77,17 @@ export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email:
           </Card>
         )}
       </div>
-      {owner && <Avisos />}
-      <Disponibilidad d={d} />
-      <Barberos d={d} />
-      <Servicios d={d} />
+      {(owner || me) && <Avisos barbero={!owner} />}
+      {owner && <Disponibilidad d={d} />}
+      {owner && <Barberos d={d} />}
+      {owner && <Servicios d={d} />}
       {aud && <Auditoria d={d} onClose={() => setAud(false)} />}
     </div>
   );
 }
 
 /** Avisos push en este dispositivo cuando un cliente reserva desde el link (etapa 12). */
-function Avisos() {
+function Avisos({ barbero = false }: { barbero?: boolean }) {
   const [e, setE] = useState<EstadoAvisos | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const { toast } = useFeedback();
@@ -92,7 +99,9 @@ function Avisos() {
   };
   return (
     <Card title="Avisos de reservas">
-      <p className="mb-3 text-xs text-muted">Te avisa en este dispositivo, aunque la app esté cerrada, cuando un cliente pide un turno desde el link de reserva. Activalo en cada teléfono o computadora donde quieras recibirlos.</p>
+      <p className="mb-3 text-xs text-muted">{barbero
+        ? 'Te avisa en este teléfono, aunque la app esté cerrada, cuando un cliente pide un turno con vos desde el link de reserva.'
+        : 'Te avisa en este dispositivo, aunque la app esté cerrada, cuando un cliente pide un turno desde el link de reserva. Activalo en cada teléfono o computadora donde quieras recibirlos.'}</p>
       {!e ? <p className="text-sm text-muted">Revisando…</p>
         : e.tipo == 'no-disponible' ? <p className="text-sm text-warn">{e.motivo}</p>
         : e.tipo == 'bloqueado' ? <p className="text-sm text-warn">Los avisos están bloqueados para esta app. Habilitalos en los ajustes del teléfono (Notificaciones → Barber Hood) o del navegador, y volvé a entrar.</p>

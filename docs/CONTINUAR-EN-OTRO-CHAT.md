@@ -44,6 +44,8 @@ y reserva pública `#reservar`.
 - Comisiones: al liquidar con período "Mes" de un mes de 30 días o febrero, la estable mandaba una fecha
   inexistente (ej. 2026-09-31); ahora se envía el último día real del mes.
 - Accesibilidad: etiquetas visibles en formularios, Escape cierra paneles.
+- Barberos: también tienen **Ajustes** (su cuenta, cerrar sesión y activar avisos de sus reservas) y un saludo
+  "¡Bienvenido, (nombre)!" con su foto al entrar a Turnos. La prueba de navegación lo refleja como cambio intencional.
 - Datos en vivo: se recarga solo la tabla que cambió y se escuchan todas las tablas (la estable no escuchaba 6).
 
 ## Hecho recientemente
