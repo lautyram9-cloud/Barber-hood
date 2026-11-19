@@ -79,7 +79,17 @@ test('barbero: ve solo sus secciones y NUNCA pide tablas del dueño', async ({ p
   const labels = isDesktop(page)
     ? await page.locator('aside nav button').allInnerTexts()
     : await page.locator('nav[aria-label="Secciones"]').last().getByRole('button').allInnerTexts();
-  expect(labels.map((l) => l.replace(/\s*estable$/, '').trim())).toEqual(['Turnos', 'Clientes', 'Mi perfil']);
+  expect(labels.map((l) => l.replace(/\s*estable$/, '').trim())).toEqual(['Turnos', 'Clientes', 'Mi perfil', 'Ajustes']);
+  const yo = DATA.barberos!.find((b) => b.id == BARBER.barberoId)!;
+  await expect(page.getByText(`¡Bienvenido, ${yo.nombre}!`), 'saludo al entrar').toBeVisible();
+  // Ajustes del barbero: solo su cuenta y sus avisos (nada del negocio)
+  await page.goto('#/aj');
+  await expect(page.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
+  const main = page.locator('main');
+  await expect(main.locator('section', { hasText: 'Cuenta' })).toContainText(yo.nombre);
+  await expect(main.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
+  await expect(main.locator('section', { hasText: 'Avisos de reservas' })).toContainText('turno con vos');
+  for (const t of ['Copias y control', 'Disponibilidad', 'Barberos y comisión', 'Servicios y comisión']) await expect(main.getByText(t, { exact: true }), `el barbero no ve ${t}`).toHaveCount(0);
   // Intentar entrar a una sección del dueño por URL no la muestra.
   await page.goto('#/due');
   await expect(page).toHaveURL(/#\/tur$/);

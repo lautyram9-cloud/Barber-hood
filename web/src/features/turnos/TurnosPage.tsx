@@ -7,6 +7,7 @@ import { sb } from '@/lib/supabase';
 import { usePeriod } from '@/state/period';
 import { useAccion } from '@/state/feedback';
 import { PageHeader } from '@/components/PageHeader';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button, Card, Empty, cx } from '@/components/ui';
 import { Select } from '@/components/ui/form';
 import { TurnoRow } from './TurnoRow';
@@ -107,6 +108,7 @@ function TurnosBarbero({ d, me, onOpen }: { d: AppData; me: string; onOpen(t: Tu
   const asignar = (t: Turno) => run(async () => { await T.asignarme(sb, T.agendaCtx(d), t.id, me); return 'Turno asignado'; }, ['turnos']);
   return (
     <div className="space-y-4 lg:space-y-6">
+      <Bienvenida d={d} me={me} />
       <PageHeader title="Turnos" subtitle="Tus turnos y los disponibles para asignarte" />
       <Card title="Turnos disponibles y míos">
         {lista.length ? lista.map((t) => (
@@ -117,6 +119,22 @@ function TurnosBarbero({ d, me, onOpen }: { d: AppData; me: string; onOpen(t: Tu
           } />
         )) : <Empty>No hay turnos.</Empty>}
       </Card>
+    </div>
+  );
+}
+
+/** Saludo al barbero al entrar: "¡Bienvenido, Lucas!" con su foto. */
+function Bienvenida({ d, me }: { d: AppData; me: string }) {
+  const b = d.barberosTodos.find((x) => x.id == me);
+  if (!b) return null;
+  const hoy = T.turnosDelBarbero(d, me).filter((t) => t.barberoId == me && t.fecha == L.today()).length;
+  return (
+    <div className="flex items-center gap-4 rounded-3xl border border-line bg-gradient-to-br from-accent/15 via-surface to-surface p-4 sm:p-5">
+      <Avatar nombre={b.nombre} foto={b.foto} size={56} />
+      <div className="min-w-0">
+        <p className="truncate text-xl font-semibold tracking-tight">¡Bienvenido, {b.nombre}!</p>
+        <p className="text-sm text-muted">{hoy ? `Hoy te ${hoy == 1 ? 'queda 1 turno' : `quedan ${hoy} turnos`} por atender.` : 'Hoy no tenés turnos pendientes por ahora.'}</p>
+      </div>
     </div>
   );
 }
