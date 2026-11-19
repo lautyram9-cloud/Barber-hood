@@ -120,3 +120,35 @@ test('Ajustes: tarjeta de avisos de reservas explica qué falta en cada disposit
   else await expect(card).toContainText('Agregar a pantalla de inicio');
   await expect(card.getByRole('button', { name: /Activar avisos/ })).toHaveCount(0);
 });
+
+test('Ajustes: el dueño sube la foto de un barbero (se achica a JPG y queda guardada)', async ({ page }) => {
+  const b = DATA.barberos!.filter((x) => x.activo)[0];
+  const log = await entrar(page, 'aj', { 'POST storage': null, 'PATCH barberos': '' });
+  // imagen de prueba de 600x400: la app la recorta a un cuadrado de hasta 480 px
+  const png = await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 600; c.height = 400;
+    const g = c.getContext('2d')!; g.fillStyle = '#2f8cff'; g.fillRect(0, 0, 600, 400);
+    const blob = await new Promise<Blob>((ok) => c.toBlob((x) => ok(x!), 'image/png'));
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+  await page.getByLabel(`Archivo de foto de ${b.nombre}`).setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await expect(page.getByRole('status').filter({ hasText: 'Foto actualizada' })).toBeVisible();
+  const sub = log.bodies.find((x) => x.op == 'POST storage')!;
+  expect(sub.body).toMatch(new RegExp(`^barberos/${b.id}/\\d+\\.jpg$`));
+  const patch = log.bodies.find((x) => x.op == 'PATCH barberos')!;
+  expect(patch).toMatchObject({ query: `?id=eq.${b.id}` });
+  expect((patch.body as { foto: string }).foto).toBe((sub.body as string).replace(/^barberos\//, ''));
+});
+
+test('Ajustes: si la base no tiene el espacio de fotos, avisa y no cambia nada', async ({ page }) => {
+  const b = DATA.barberos!.filter((x) => x.activo)[0];
+  const log = await entrar(page, 'aj', {});
+  const png = await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 50; c.height = 50;
+    const blob = await new Promise<Blob>((ok) => c.toBlob((x) => ok(x!), 'image/png'));
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+  await page.getByLabel(`Archivo de foto de ${b.nombre}`).setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await expect(page.getByRole('status').filter({ hasText: 'No se pudo subir la foto' })).toBeVisible();
+  expect(log.bodies).toEqual([]);
+});

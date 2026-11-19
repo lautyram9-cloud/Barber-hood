@@ -36,6 +36,13 @@ export async function mockSupabase(page: Page, tables: RawTables, user: MockUser
     }
     if (u.pathname === '/auth/v1/user') return { status: 200, body: authUser };
     if (u.pathname === '/auth/v1/logout') return { status: 204, body: {} };
+    if (u.pathname.startsWith('/storage/v1/object/public/')) return { status: 404, body: {} }; // fotos: en las pruebas no hay archivos
+    if (u.pathname.startsWith('/storage/v1/object/')) {
+      const ruta = u.pathname.slice('/storage/v1/object/'.length);
+      log.writes.push(`${m} storage`);
+      if (`${m} storage` in permitidas) { log.bodies.push({ op: `${m} storage`, body: ruta, query: req.headers()['content-type'] }); return { status: 200, body: permitidas[`${m} storage`] ?? { Key: ruta } }; }
+      return { status: 403, body: { message: 'Escrituras bloqueadas en pruebas' } };
+    }
     if (u.pathname.startsWith('/rest/v1/rpc/')) {
       const fn = u.pathname.slice(13); log.rpcs.push(fn);
       if (fn === 'costos_dueno') { // como la base: solo el dueño; los barberos reciben error

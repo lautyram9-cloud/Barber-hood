@@ -10,7 +10,7 @@ export interface Rows {
   adelantos: { id: string; barbero_id: string; created_at: string; fecha: string; liquidacion_id: string | null; medio_pago: string; monto: Num; nota: string | null };
   asistencia: { id: string; barbero_id: string; estado: string; fecha: string; hora: string | null };
   audit_logs: { id: number; antes: unknown; fecha: string; fila: unknown; op: string | null; tabla: string | null; usuario: string | null };
-  barberos: { id: string; activo: boolean; comision_pct: Num | null; created_at: string; nombre: string; slot_min: number; user_id: string | null };
+  barberos: { id: string; activo: boolean; comision_pct: Num | null; created_at: string; nombre: string; slot_min: number; user_id: string | null; foto?: string | null };
   caja_mov: { id: string; caja_id: string; concepto: string; creado_por: string | null; created_at: string; monto: Num; tipo: string };
   cajas: { id: string; abierta_por: string | null; apertura_at: string; cerrada_por: string | null; cierre_at: string | null; contado: Num | null; diferencia: Num | null; esperado: Num | null; estado: string; notas: string | null; saldo_inicial: Num };
   clientes: { id: string; created_at: string; nombre: string; observaciones: string | null; preferencias: string | null; telefono: string | null };
@@ -51,7 +51,7 @@ export interface CajaResumen {
 
 /** Respuesta de la RPC public_info (link #reservar). */
 export interface PublicInfo {
-  barberos: { id: string; nombre: string; slot_min: number }[];
+  barberos: { id: string; nombre: string; slot_min: number; foto?: string | null }[];
   servicios: { id: string; nombre: string; precio: Num; dur: number | null }[];
   horarios: { dia: number; desde: string; hasta: string }[];
   ocupados: { i: string; f: string; b: string | null }[];

@@ -64,6 +64,9 @@ y reserva pública `#reservar`.
 
 ## Lo que falta (en este orden)
 
+- **Fotos de barberos y reserva rediseñada** (etapa 13, sin ejecutar): ejecutar `supabase/etapa13-fotos-barberos.sql`
+  (columna `barberos.foto`, espacio de archivos público "barberos" donde solo el dueño sube, y `public_info` con la foto).
+  Las fotos se cargan en Ajustes → Barberos (tocar el círculo). Sin foto se ven las iniciales.
 0. **Avisos push de reservas** (etapa 12, preparada, sin activar). Orden:
    (1) desplegar la función `supabase/functions/notificar-turno` (`index.ts` + `avisos.ts`) con "Verify JWT"
    DESACTIVADO; (2) ejecutar `supabase/etapa12-avisos-push.sql`; (3) publicar la app; (4) en cada dispositivo:

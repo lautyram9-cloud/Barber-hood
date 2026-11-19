@@ -34,7 +34,7 @@ export function buildAppData(r: RawTables): AppData {
 
   return {
     barberosTodos: ba,
-    barberos: ba.filter((x) => x.activo).map((x) => ({ id: x.id, nombre: x.nombre, slotMin: x.slot_min, userId: x.user_id, comisionPct: x.comision_pct == null ? null : +x.comision_pct })),
+    barberos: ba.filter((x) => x.activo).map((x) => ({ id: x.id, nombre: x.nombre, slotMin: x.slot_min, userId: x.user_id, comisionPct: x.comision_pct == null ? null : +x.comision_pct, foto: x.foto ?? null })),
     servicios: sv.filter((x) => x.activo).map((x) => ({ id: x.id, nombre: x.nombre, precio: +x.precio, comisionPct: +x.comision_pct, duracionMin: x.duracion_min })),
     horario,
     comisionesBarbero: (r.comisiones_barbero ?? []).map((x) => ({ id: x.id, barberoId: x.barbero_id, servicioId: x.servicio_id, productoId: x.producto_id, pct: +x.pct })),
