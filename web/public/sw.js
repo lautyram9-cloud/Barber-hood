@@ -28,3 +28,30 @@ self.addEventListener('fetch', (e) => {
       .catch(() => caches.match(r).then((m) => m || (r.mode === 'navigate' ? caches.match('index.html') : Response.error()))),
   );
 });
+
+// Avisos push (etapa 12): reservas nuevas desde el link. El contenido lo arma la función "notificar-turno".
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Barber Hood', {
+    body: d.body || 'Hay novedades en la app',
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    tag: d.tag || 'barberhood',
+    renotify: true,
+    data: { url: d.url || './#/tur' },
+  }));
+});
+
+// Al tocar el aviso: abre la app en Turnos (o enfoca la ventana que ya esté abierta).
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const destino = new URL(e.notification.data?.url || './#/tur', self.registration.scope).href;
+  e.waitUntil((async () => {
+    const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of ventanas) {
+      if (w.url.startsWith(self.registration.scope) && 'focus' in w) { await w.focus(); if ('navigate' in w) await w.navigate(destino).catch(() => {}); return; }
+    }
+    await self.clients.openWindow(destino);
+  })());
+});

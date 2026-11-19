@@ -53,21 +53,31 @@ y reserva pública `#reservar`.
 - **Corte final**: variable `CORTE_FINAL=true`; PWA nueva (service worker `bhm-v2`) en la raíz, estable en `/legacy/`.
   Probado por el dueño. **Volver atrás**: borrar la variable `CORTE_FINAL` y correr el workflow (ver `docs/PUBLICACION.md`).
 - SQL de etapas 3–9 subidos a `supabase/`.
-- `pruebas-supabase.sql`: 46 correctas y 0 con problemas; las pruebas de Caja se omitieron porque había una caja
-  real abierta (mensaje "prueba omitida"). Dan 50 con la caja cerrada.
+- `pruebas-supabase.sql`: **50/50** con la caja cerrada y con los permisos de la etapa 11 ya aplicados.
+- Restaurar copia de seguridad (Ajustes): recupera lo que falta, nunca pisa ni borra (`etapa10-restaurar-respaldo.sql`, ejecutado).
+- Movimientos: medio de pago en cada fila y ventana de detalle (quién lo cargó, día y hora, medio, etc.).
+- Desenfoque al cambiar de sección y al desplegar el botón + y el menú Más.
+- **Costos ocultos al barbero** (etapa 11, ejecutada y publicada): `etapa11a-costos-dueno.sql` + `etapa11b-ocultar-costos.sql`.
+  El dueño recibe los costos por `costos_dueno()`. Volver atrás: `grant select on public.productos, public.ingresos to authenticated;`.
+  Límite conocido: Realtime no respeta permisos por columna (cerrarlo exige mover los costos a una tabla aparte).
+  Si se agrega una columna a `productos` o `ingresos`, volver a ejecutar `etapa11b` para habilitarla.
 
 ## Lo que falta (en este orden)
 
-1. **Repetir `pruebas-supabase.sql` con la caja cerrada** (de noche) y confirmar `Correctas: 50 · Con problemas: 0`.
-2. **Protección de contraseñas filtradas** (Supabase Auth): no disponible en el plan actual (requiere Pro).
+0. **Avisos push de reservas** (etapa 12, preparada, sin activar). Orden:
+   (1) desplegar la función `supabase/functions/notificar-turno` (`index.ts` + `avisos.ts`) con "Verify JWT"
+   DESACTIVADO; (2) ejecutar `supabase/etapa12-avisos-push.sql`; (3) publicar la app; (4) en cada dispositivo:
+   Ajustes → Avisos de reservas → Activar (en iPhone, con la app instalada en la pantalla de inicio).
+   Avisa al dueño y al barbero asignado; no incluye el teléfono; máx. 20 avisos por hora; un aviso por turno.
+   Las claves VAPID se generan solas y viven en `push_config` (solo el servidor la lee).
+   Volver atrás: `drop trigger if exists t_avisar_turno on public.turnos;`.
+1. **Protección de contraseñas filtradas** (Supabase Auth): no disponible en el plan actual (requiere Pro).
    Mitigación: largo mínimo de contraseña de 10+, exigir tipos de caracteres, claves únicas, desactivar el
    registro público si no se usa (verificar que no rompa `#reservar`).
-3. **Ocultar costos al barbero** (etapa 11): app lista en el PR; la base necesita DOS scripts en este orden:
-   `supabase/etapa11a-costos-dueno.sql` (ANTES de publicar la app nueva) y `supabase/etapa11b-ocultar-costos.sql`
-   (DESPUÉS de publicarla). Volver atrás: `grant select on public.productos, public.ingresos to authenticated;`.
-   Límite conocido: Realtime no respeta permisos por columna (cerrarlo exige mover los costos a una tabla aparte).
-4. Mejoras posibles, en este orden de impacto: lectura por rango de fechas (hoy se lee todo el historial y se
-   enlentece con el tiempo; umbral sugerido: ~5.000 ingresos).
+2. Dueño que también es barbero: hoy un usuario dueño se trata siempre como dueño aunque esté vinculado a un
+   barbero (sin "Mi perfil" ni "Asignarme"). Se puede agregar si se quiere.
+3. Lectura por rango de fechas (hoy se lee todo el historial y se enlentece con el tiempo; umbral sugerido:
+   ~5.000 ingresos).
 
 ## Reglas de trabajo del dueño (respetar siempre)
 

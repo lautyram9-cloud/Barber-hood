@@ -153,6 +153,16 @@ test.describe('PWA (service worker)', () => {
     expect(info.urls.filter((u) => u.includes('supabase.co')), 'los datos nunca se cachean').toEqual([]);
     expect(await (await context.request.get('manifest.json')).json()).toMatchObject({ start_url: './', scope: './', display: 'standalone' });
   });
+
+  test('con el worker activo, Ajustes ofrece activar los avisos de reservas', async ({ page }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'en iPhone/iPad emulado la app no figura instalada');
+    await login(page, OWNER);
+    await page.locator('main h1').first().waitFor();
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.goto('#/aj');
+    const card = page.locator('main section', { hasText: 'Avisos de reservas' });
+    await expect(card.getByRole('button', { name: 'Activar avisos en este dispositivo' })).toBeVisible();
+  });
 });
 
 test.describe('costos solo para el dueño (etapa 11)', () => {

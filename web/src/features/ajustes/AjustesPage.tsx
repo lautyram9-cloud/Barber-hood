@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Download, History, LogOut, Trash2, Upload } from 'lucide-react';
+import { Bell, BellOff, Download, History, LogOut, Send, Trash2, Upload } from 'lucide-react';
 import type { AppData, Barbero } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
 import { fetchAll, rpc, sb } from '@/lib/supabase';
 import { guardarArchivo } from '@/lib/files';
+import { activarAvisos, desactivarAvisos, estadoAvisos, probarAvisos, type EstadoAvisos } from '@/lib/push';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { tableKey } from '@/state/data';
 import { PageHeader } from '@/components/PageHeader';
@@ -67,11 +68,41 @@ export function AjustesPage({ d, email, owner, onSignOut }: { d: AppData; email:
           </Card>
         )}
       </div>
+      {owner && <Avisos />}
       <Disponibilidad d={d} />
       <Barberos d={d} />
       <Servicios d={d} />
       {aud && <Auditoria d={d} onClose={() => setAud(false)} />}
     </div>
+  );
+}
+
+/** Avisos push en este dispositivo cuando un cliente reserva desde el link (etapa 12). */
+function Avisos() {
+  const [e, setE] = useState<EstadoAvisos | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const { toast } = useFeedback();
+  const leer = () => estadoAvisos().then(setE).catch(() => setE({ tipo: 'no-disponible', motivo: 'No se pudo revisar el estado de los avisos.' }));
+  useEffect(() => { leer(); }, []);
+  const hacer = async (fn: () => Promise<string>) => {
+    setOcupado(true);
+    try { toast(await fn()); } catch (x) { toast((x as Error).message || 'No se pudo completar'); } finally { setOcupado(false); leer(); }
+  };
+  return (
+    <Card title="Avisos de reservas">
+      <p className="mb-3 text-xs text-muted">Te avisa en este dispositivo, aunque la app esté cerrada, cuando un cliente pide un turno desde el link de reserva. Activalo en cada teléfono o computadora donde quieras recibirlos.</p>
+      {!e ? <p className="text-sm text-muted">Revisando…</p>
+        : e.tipo == 'no-disponible' ? <p className="text-sm text-warn">{e.motivo}</p>
+        : e.tipo == 'bloqueado' ? <p className="text-sm text-warn">Los avisos están bloqueados para esta app. Habilitalos en los ajustes del teléfono (Notificaciones → Barber Hood) o del navegador, y volvé a entrar.</p>
+        : e.tipo == 'apagado' ? <Button className="w-full" disabled={ocupado} onClick={() => hacer(async () => { await activarAvisos(); return 'Avisos activados en este dispositivo'; })}><Bell size={16} /> Activar avisos en este dispositivo</Button>
+        : (
+          <div className="grid gap-2">
+            <p className="flex items-center gap-2 text-sm text-ok"><Bell size={16} /> Activos en este dispositivo</p>
+            <Button variant="outline" disabled={ocupado} onClick={() => hacer(async () => { const n = await probarAvisos(); return n ? 'Aviso de prueba enviado' : 'No se encontró este dispositivo: desactivá y activá de nuevo'; })}><Send size={16} /> Enviar aviso de prueba</Button>
+            <Button variant="outline" disabled={ocupado} onClick={() => hacer(async () => { await desactivarAvisos(); return 'Avisos desactivados en este dispositivo'; })}><BellOff size={16} /> Desactivar</Button>
+          </div>
+        )}
+    </Card>
   );
 }
 
