@@ -109,12 +109,51 @@ test('#reservar: el cliente reserva sin login (solo funciones públicas)', async
   await page.getByLabel('Tu nombre').fill('Ana');
   await page.getByLabel('Tu teléfono').fill('3874123456');
   await page.getByRole('button', { name: new RegExp('^' + info.servicios[0].nombre + ' ·') }).click();
-  const dia = await page.getByLabel('Día').inputValue(), hora = await page.getByLabel('Horario').inputValue();
+  await page.getByRole('button', { name: 'Solicitar turno' }).click();
+  await expect(page.getByRole('alert'), 'sin elegir horario no se envía').toHaveText('Completá nombre, teléfono y horario');
+  const primero = page.getByRole('group', { name: 'Horarios' }).getByRole('button').first();
+  const hora = (await primero.textContent())!.trim();
+  await primero.click();
+  await expect(primero).toHaveAttribute('aria-pressed', 'true');
+  const dia = await page.getByLabel('Elegir otra fecha').inputValue();
   await page.getByRole('button', { name: 'Solicitar turno' }).click();
   await expect(page.getByRole('heading', { name: '¡Solicitud enviada!' })).toBeVisible();
   expect(log.rpcs.filter((r) => r != 'public_info')).toEqual(['reservar_publico']);
   expect(log.bodies.at(-1)!.body).toMatchObject({ p_nombre: 'Ana', p_tel: '3874123456', p_inicio: `${dia}T${hora}:00`, p_servicios: [info.servicios[0].id], p_notas: null });
   expect(log.tables, 'la reserva pública no lee tablas').toEqual([]);
+});
+
+test('#reservar: cada barbero se ve con su foto (o sus iniciales) y se puede elegir', async ({ page }) => {
+  await page.clock.setFixedTime(NOW);
+  const activos = DATA.barberos!.filter((b) => b.activo);
+  const info = {
+    barberos: activos.map((b, i) => ({ id: b.id, nombre: b.nombre, slot_min: b.slot_min, foto: i == 0 ? `${b.id}/123.jpg` : i == 1 ? `${b.id}/rota.jpg` : null })),
+    servicios: DATA.servicios!.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre, precio: s.precio, dur: s.duracion_min })),
+    horarios: DATA.horarios!.map((h) => ({ dia: h.dia, desde: h.desde, hasta: h.hasta })), ocupados: [],
+  };
+  const log = await mockSupabase(page, DATA, OWNER, NOW, { 'rpc public_info': info, 'rpc reservar_publico': 'tur-nuevo' });
+  // La foto del primero existe (imagen real de 1x1); la del segundo no (404) → iniciales.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  await page.route(`**/storage/v1/object/public/barberos/${activos[0].id}/123.jpg`, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
+  await page.goto('#reservar');
+  const paso = page.getByRole('region', { name: 'Barbero' });
+  const foto = paso.getByRole('img', { name: activos[0].nombre });
+  await expect(foto).toHaveAttribute('src', new RegExp(`/storage/v1/object/public/barberos/${activos[0].id}/123\\.jpg$`));
+  await expect.poll(() => foto.evaluate((i) => (i as HTMLImageElement).naturalWidth), 'la foto cargó').toBeGreaterThan(0);
+  if (activos[1]) await expect(paso.getByRole('img', { name: activos[1].nombre }), 'foto rota: iniciales').toHaveText(/^[A-Z?]+$/);
+  await expect(paso.getByRole('button', { name: 'Cualquiera' })).toHaveAttribute('aria-pressed', 'true');
+  await paso.getByRole('button', { name: activos[0].nombre }).click();
+  await expect(paso.getByRole('button', { name: activos[0].nombre })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByLabel('Tu nombre').fill('Ana');
+  await page.getByLabel('Tu teléfono').fill('3874123456');
+  await page.getByRole('button', { name: new RegExp('^' + info.servicios[0].nombre + ' ·') }).click();
+  await page.getByRole('group', { name: 'Horarios' }).getByRole('button').first().click();
+  await page.getByRole('button', { name: 'Solicitar turno' }).click();
+  await expect(page.getByRole('heading', { name: '¡Solicitud enviada!' })).toBeVisible();
+  expect(log.bodies.at(-1)!.body).toMatchObject({ p_barbero: activos[0].id });
+  // la confirmación muestra al barbero con su foto
+  await expect(page.getByRole('img', { name: activos[0].nombre })).toBeVisible();
+  expect(log.external, 'nada sale a otros servidores').toEqual([]);
 });
 
 test('la versión estable sigue publicada intacta en /legacy/', async ({ request }) => {

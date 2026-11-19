@@ -7,7 +7,7 @@ import type { Rows } from '@/lib/database.types';
 
 export type Rol = 'owner' | 'barber';
 
-export interface Barbero { id: string; nombre: string; slotMin: number; userId: string | null; comisionPct: number | null }
+export interface Barbero { id: string; nombre: string; slotMin: number; userId: string | null; comisionPct: number | null; foto?: string | null }
 export interface Servicio { id: string; nombre: string; precio: number; comisionPct: number; duracionMin: number | null }
 export interface Producto { id: string; nombre: string; categoria: string | null; costo: number; precio: number; stock: number; stockMin: number; comisionPct: number; proveedorId: string }
 export type Tramo = [desde: string, hasta: string];

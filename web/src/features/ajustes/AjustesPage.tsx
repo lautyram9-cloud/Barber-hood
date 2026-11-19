@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, Download, History, LogOut, Send, Trash2, Upload } from 'lucide-react';
+import { Bell, BellOff, Camera, Download, History, LogOut, Send, Trash2, Upload } from 'lucide-react';
 import type { AppData, Barbero } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
 import { fetchAll, rpc, sb } from '@/lib/supabase';
 import { guardarArchivo } from '@/lib/files';
+import { quitarFoto, subirFoto } from '@/lib/fotos';
+import { Avatar } from '@/components/ui/Avatar';
 import { activarAvisos, desactivarAvisos, estadoAvisos, probarAvisos, type EstadoAvisos } from '@/lib/push';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { tableKey } from '@/state/data';
@@ -146,10 +148,31 @@ function FichaBarbero({ d, b }: { d: AppData; b: Barbero }) {
   const [pct, setPct] = useState(b.comisionPct == null ? '' : String(b.comisionPct));
   const [item, setItem] = useState(d.servicios[0] ? 's:' + d.servicios[0].id : d.productos[0] ? 'p:' + d.productos[0].id : ''), [xp, setXp] = useState('');
   const { run, ocupado } = useAccion(), { toast, confirmar } = useFeedback();
+  const qc = useQueryClient();
+  const fotoRef = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const foto = async (fn: () => Promise<void>, ok: string) => {
+    setSubiendo(true);
+    try { await fn(); toast(ok); qc.invalidateQueries({ queryKey: tableKey('barberos') }); }
+    catch (e) { toast((e as Error).message || 'No se pudo cambiar la foto'); }
+    finally { setSubiendo(false); if (fotoRef.current) fotoRef.current.value = ''; }
+  };
   return (
     <div className="border-t border-line py-4 first:border-t-0">
       <div className="mb-3 flex items-center justify-between">
-        <div><p className="text-sm font-medium">{b.nombre}</p><p className="text-xs text-muted">{b.slotMin || 30} min · {b.userId ? 'usuario vinculado' : 'sin usuario'}</p></div>
+        <div className="flex items-center gap-3">
+          <button type="button" aria-label={`Cambiar foto de ${b.nombre}`} disabled={subiendo} onClick={() => fotoRef.current?.click()} className="relative shrink-0 rounded-full disabled:opacity-60">
+            <Avatar nombre={b.nombre} foto={b.foto} size={52} />
+            <span className="absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-surface bg-accent p-1 text-white"><Camera size={11} /></span>
+          </button>
+          <input ref={fotoRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-label={`Archivo de foto de ${b.nombre}`}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) foto(() => subirFoto(b.id, f, b.foto), 'Foto actualizada'); }} />
+          <div>
+            <p className="text-sm font-medium">{b.nombre}</p>
+            <p className="text-xs text-muted">{b.slotMin || 30} min · {b.userId ? 'usuario vinculado' : 'sin usuario'}</p>
+            {b.foto && <button type="button" disabled={subiendo} className="text-xs text-subtle underline-offset-2 hover:text-ko hover:underline" onClick={() => foto(() => quitarFoto(b.id, b.foto!), 'Foto quitada')}>Quitar foto</button>}
+          </div>
+        </div>
         <button aria-label={`Quitar a ${b.nombre}`} className="rounded-lg p-2 text-subtle hover:text-ko" onClick={async () => {
           if (await confirmar({ titulo: `¿Quitar a ${b.nombre}?`, texto: 'Deja de aparecer en turnos y ranking. Su historial se conserva.', accion: 'Quitar', peligro: true })) run(async () => { await A.quitarBarbero(sb, b.id); }, ['barberos']);
         }}><Trash2 size={16} /></button>

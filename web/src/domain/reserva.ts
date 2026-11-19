@@ -1,6 +1,6 @@
 import type { PublicInfo } from '@/lib/database.types';
 import type { Horario, Servicio } from './model';
-import { elegirBarbero, type AgendaCtx } from './logic';
+import { elegirBarbero, isoLocal, type AgendaCtx } from './logic';
 import type { Db } from './turnos';
 
 // Reserva pública (link #reservar, sin login): bootPub, V.res y addres de la versión estable.
@@ -31,3 +31,21 @@ export async function enviarReserva(db: Db, x: Reserva, barbero: string) {
   const r = await db.rpc('reservar_publico', { p_nombre: x.nombre.trim(), p_tel: x.telefono.trim(), p_inicio: x.fecha + 'T' + x.hora + ':00', p_barbero: barbero, p_servicios: x.servicios.map((s) => s.id), p_notas: x.notas || null });
   if (r.error) throw r.error;
 }
+
+// ---------- Fechas para la página de reservas ----------
+const SEMANA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const SEMANA_LARGA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const aFecha = (f: string) => { const [y, m, d] = f.split('-').map(Number); return new Date(y, m - 1, d); };
+
+/** Los próximos n días (desde hoy), como 'AAAA-MM-DD' en hora local. */
+export function proximosDias(n: number, desde = new Date()) {
+  return Array.from({ length: n }, (_, i) => { const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + i); return isoLocal(d); });
+}
+/** '2026-11-20' → { semana: 'vie', dia: 20, mes: 'nov' } */
+export function partesDia(f: string) { const d = aFecha(f); return { semana: SEMANA[d.getDay()], dia: d.getDate(), mes: MESES[d.getMonth()] }; }
+/** '2026-11-20' → 'viernes 20 de noviembre' */
+export function diaLargo(f: string) { const d = aFecha(f); return `${SEMANA_LARGA[d.getDay()]} ${d.getDate()} de ${MESES_LARGOS[d.getMonth()]}`; }
+/** '2026-11-20' → 'vie 20/11' */
+export function diaCorto(f: string) { const d = aFecha(f); return `${SEMANA[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; }
