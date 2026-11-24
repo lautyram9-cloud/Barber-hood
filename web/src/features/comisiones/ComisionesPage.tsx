@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share2 } from 'lucide-react';
+import { HandCoins, History, Share2 } from 'lucide-react';
 import type { AppData, Liquidacion } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as C from '@/domain/comisiones';
@@ -11,6 +11,7 @@ import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Row } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
+import { Destacado, Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 const TABLAS = ['liquidaciones', 'adelantos', 'ingresos'] as const;
@@ -24,23 +25,26 @@ export function ComisionesPage({ d }: { d: AppData }) {
     <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Comisiones" subtitle="Liquidaciones y adelantos" />
       <PeriodBar />
+      <Destacado label="Comisiones del período" value={fmt(total)} hint={`Pendiente de pagar en total: ${fmt(L.comisionPendiente(d))}`} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <Card title="Comisiones del período">
+        <Card title="Por barbero">
           {lista.length ? lista.map((x) => (
             <Row key={x.barbero.id} left={x.barbero.nombre} sub={`Serv. ${fmt(x.servicios)} · Prod. ${fmt(x.productos)} · pendiente total ${fmt(L.comisionPendiente(d, x.barbero.id))}`}
               right={<span className="flex items-center gap-3">{fmt(x.comision)}<Button className="min-h-9 px-3 text-xs" onClick={() => setLiquidando(x.barbero.id)}>Liquidar</Button></span>} />
           )) : <Empty>Cargá barberos en Ajustes.</Empty>}
           <Row left={<b>Total del período</b>} right={<b>{fmt(total)}</b>} />
         </Card>
-        <Adelantos d={d} />
-      </div>
-      <Card title="Historial de liquidaciones">
+        <div className="space-y-3">
+          <Adelantos d={d} />
+          <Plegable title="Historial de liquidaciones" resumen={C.ultimasLiquidaciones(d).length ? `Última: ${L.nombreBarbero(d, C.ultimasLiquidaciones(d)[0].barberoId)} · ${fmt(C.ultimasLiquidaciones(d)[0].monto)}` : 'Sin liquidaciones'} icono={<History size={18} />}>
         {C.ultimasLiquidaciones(d).length ? C.ultimasLiquidaciones(d).map((x) => (
           <button key={x.id} className="block w-full text-left" onClick={() => setViendo(x)}>
             <Row left={`${x.fecha.slice(5)} · ${L.nombreBarbero(d, x.barberoId)}`} sub={`${x.desde || ''} → ${x.hasta || ''}`} right={fmt(x.monto)} />
           </button>
         )) : <Empty>Sin liquidaciones.</Empty>}
-      </Card>
+          </Plegable>
+        </div>
+      </div>
       {liquidando && <Liquidar d={d} id={liquidando} onClose={() => setLiquidando(null)} />}
       {viendo && <Comprobante d={d} x={viendo} onClose={() => setViendo(null)} />}
     </div>
@@ -91,7 +95,7 @@ function Adelantos({ d }: { d: AppData }) {
   const { toast } = useFeedback();
   const guardar = () => { const e = C.validarAdelanto(b, m); if (e) return toast(e); run(async () => { await C.registrarAdelanto(sb, b, m, n, md); setM(''); setN(''); return 'Adelanto registrado'; }, [...TABLAS]); };
   return (
-    <Card title="Adelantos a barberos">
+    <Plegable title="Adelantos a barberos" resumen={(() => { const p = C.ultimosAdelantos(d).filter((x) => !x.liquidacionId); return p.length ? `${p.length} pendientes de descontar` : 'Registrar un adelanto'; })()} icono={<HandCoins size={18} />}>
       {C.ultimosAdelantos(d).map((x) => <Row key={x.id} left={`${x.fecha.slice(5)} · ${L.nombreBarbero(d, x.barberoId)}`} sub={x.liquidacionId ? 'descontado en liquidación' : 'pendiente de descontar'} right={fmt(x.monto)} />)}
       <div className="mt-4 grid grid-cols-2 gap-x-3">
         <Field label="Barbero">{(id) => <Select id={id} value={b} onChange={(e) => setB(e.target.value)}><option value="">Elegí</option>{d.barberos.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</Select>}</Field>
@@ -100,6 +104,6 @@ function Adelantos({ d }: { d: AppData }) {
         <Field label="Medio de pago">{(id) => <Select id={id} value={md} onChange={(e) => setMd(e.target.value)}>{MEDIOS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>}</Field>
       </div>
       <Button variant="outline" className="w-full" disabled={ocupado} onClick={guardar}>Registrar adelanto</Button>
-    </Card>
+    </Plegable>
   );
 }

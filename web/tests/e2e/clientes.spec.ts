@@ -22,7 +22,7 @@ async function entrar(page: Page, user: MockUser, tables = DATA, permitidas: Per
   await expect(page.getByRole('heading', { name: 'Clientes', level: 1 })).toBeVisible();
   return log;
 }
-const nombres = (page: Page) => page.locator('main section button div.truncate.text-sm').allInnerTexts();
+const nombres = (page: Page) => page.locator('main section button div.truncate.font-medium').allInnerTexts();
 
 test('lista ordenada, búsqueda y filtros', async ({ page }) => {
   const log = await entrar(page, OWNER);

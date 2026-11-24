@@ -4,6 +4,7 @@ import * as L from '@/domain/logic';
 import * as M from '@/domain/movimientos';
 import { fixtures, soloBarbero } from '../fixtures';
 import { mockSupabase, type MockUser, type Permitidas } from './mock-supabase';
+import { abrir, cerrar } from './ui';
 
 const NOW_ISO = '2026-11-12T15:37:00-03:00', NOW = Date.parse(NOW_ISO), HOY = '2026-11-12';
 const DATA = fixtures(42, NOW_ISO), D = buildAppData(DATA), fmt = L.formatoPesos;
@@ -95,13 +96,14 @@ test('Movimientos: indicadores, anular con confirmación, cobrar pendiente y reg
   expect(log.bodies[0]).toMatchObject({ op: 'rpc anular_ingreso', body: { p_id: expect.any(String) } });
   // cobrar un pendiente
   const pen = M.pendientesCobro(D)[0];
-  await page.locator('main section', { hasText: 'Pendientes de cobro' }).getByRole('button').first().click();
-  await page.getByRole('dialog').getByLabel('Medio de pago').selectOption('tarjeta');
+  await (await abrir(page, 'Pendientes de cobro')).getByRole('button', { name: /·/ }).first().click();
+  await page.getByRole('dialog', { name: /^Cobrar / }).getByLabel('Medio de pago').selectOption('tarjeta');
   await page.getByRole('button', { name: 'Marcar como cobrado' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Cobrado' })).toBeVisible();
   expect(log.bodies.at(-1)).toMatchObject({ op: 'rpc cobrar_ingreso', body: { p_id: pen.id, p_medio: 'tarjeta' } });
   // registrar gasto variable desde el formulario (sin medio de pago, como la versión estable)
-  const form = page.locator('main section', { hasText: 'Registrar' }).last();
+  await cerrar(page); await cerrar(page);
+  const form = await abrir(page, 'Registrar');
   await form.getByLabel('Tipo').selectOption('gas|variable');
   await form.getByLabel('Concepto').fill('Insumos');
   await form.getByLabel('Monto').fill('8000');

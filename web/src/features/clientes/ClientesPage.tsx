@@ -36,7 +36,7 @@ export function ClientesPage({ d }: { d: AppData }) {
       <Card>
         {lista.length ? lista.map((s) => (
           <button key={s.cliente.id} onClick={() => setAbierto(s.cliente.id)} className="block w-full text-left">
-            <Row left={s.cliente.nombre} sub={`${s.cliente.telefono || 'sin teléfono'} · ${s.visitas} visitas${s.dias != null ? ' · hace ' + s.dias + ' d' : ''}`} right={fmt(s.total)} />
+            <Row left={s.cliente.nombre} sub={`${s.visitas} ${s.visitas == 1 ? "visita" : "visitas"}${s.dias != null ? " · hace " + s.dias + " d" : ""}`} right={fmt(s.total)} />
           </button>
         )) : <Empty>Sin clientes.</Empty>}
       </Card>

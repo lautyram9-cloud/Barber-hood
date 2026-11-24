@@ -3,6 +3,7 @@ import { buildAppData } from '@/domain/build';
 import * as L from '@/domain/logic';
 import { fixtures, soloBarbero } from '../fixtures';
 import { mockSupabase, type MockUser, type Permitidas } from './mock-supabase';
+import { abrir, cerrar } from './ui';
 
 const NOW_ISO = '2026-11-12T15:37:00-03:00', NOW = Date.parse(NOW_ISO), HOY = '2026-11-12';
 const DATA = fixtures(42, NOW_ISO), D = buildAppData(DATA), fmt = L.formatoPesos;
@@ -27,13 +28,21 @@ test('Estadísticas: resultado del período y cambio de período', async ({ page
   const log = await entrar(page, OWNER, 'est');
   await expect(page.getByRole('heading', { name: 'Estadísticas', level: 1 })).toBeVisible();
   const rs = L.resultado(D, ...L.rango('sem', HOY));
+  const destacado = page.locator('main div', { has: page.getByText('Ganancia del período', { exact: true }) }).last();
+  await expect(destacado, 'la ganancia, grande arriba').toContainText(fmt(rs.neto));
+  await abrir(page, 'Detalle del período');
   await expect(fila(page, 'Ganancia real estimada')).toContainText(fmt(rs.neto));
   await expect(fila(page, 'Facturación').first()).toContainText(fmt(rs.ingresos));
+  await cerrar(page);
   await page.getByRole('tab', { name: 'Mes' }).click();
   const rm = L.resultado(D, ...L.rango('mes', HOY));
+  await expect(destacado).toContainText(fmt(rm.neto));
+  await abrir(page, 'Detalle del período');
   await expect(fila(page, 'Ganancia real estimada')).toContainText(fmt(rm.neto));
-  await page.getByRole('button', { name: 'Período anterior' }).click(); // octubre
+  await cerrar(page);
+  await page.getByRole('button', { name: 'Período anterior', exact: true }).click(); // octubre
   const ro = L.resultado(D, ...L.rango('mes', '2026-10-12'));
+  await abrir(page, 'Detalle del período');
   await expect(fila(page, 'Ganancia real estimada')).toContainText(fmt(ro.neto));
   expect(log.writes).toEqual([]);
 });
@@ -41,6 +50,7 @@ test('Estadísticas: resultado del período y cambio de período', async ({ page
 test('Estadísticas: exporta CSV idéntico al de la versión estable', async ({ page }, info) => {
   test.skip(info.project.name !== 'escritorio', 'la descarga se prueba en escritorio (en iPhone se usa el menú Compartir)');
   await entrar(page, OWNER, 'est');
+  await abrir(page, 'Exportar a CSV');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Movimientos (ingresos y gastos)' }).click()]);
   const x = L.csvExport(D, 'mov', ...L.rango('sem', HOY));
   expect(dl.suggestedFilename()).toBe(x.nombre);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Banknote, ChevronRight, Clock, CreditCard, Landmark, Trash2 } from 'lucide-react';
+import { Banknote, ChevronRight, Clock, CreditCard, Landmark, Plus, Trash2, Users } from 'lucide-react';
 import type { AppData, Movimiento } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as M from '@/domain/movimientos';
@@ -11,6 +11,7 @@ import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Kpi, Row, cx } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
+import { Destacado, Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 
@@ -27,10 +28,10 @@ export function MovimientosPage({ d }: { d: AppData }) {
     <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Movimientos" subtitle="Ingresos y gastos del período" />
       <PeriodBar />
-      <div className="grid grid-cols-3 gap-3">
+      <Destacado label="Neto del período" value={fmt(r.neto)} tone={r.neto >= 0 ? 'ok' : 'ko'} />
+      <div className="grid grid-cols-2 gap-3">
         <Kpi label="Ingresos" value={fmt(r.ingresos)} tone="ok" />
         <Kpi label="Gastos" value={fmt(r.gastos)} tone="ko" />
-        <Kpi label="Neto" value={fmt(r.neto)} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="space-y-4 lg:col-span-2 lg:space-y-6">
@@ -38,20 +39,20 @@ export function MovimientosPage({ d }: { d: AppData }) {
             {lista.length ? lista.map((m) => <FilaMovimiento key={m.id} d={d} m={m} onAbrir={() => setVerId(m.id)} />) : <Empty>Sin movimientos.</Empty>}
           </Card>
         </div>
-        <div className="space-y-4 lg:space-y-6">
+        <div className="space-y-3">
           {pen.length > 0 && (
-            <Card title={`Pendientes de cobro (${pen.length} · ${fmt(L.sumMonto(pen))})`}>
+            <Plegable title="Pendientes de cobro" resumen={`${pen.length} sin cobrar · ${fmt(L.sumMonto(pen))}`} tone="warn" icono={<Clock size={18} />}>
               {pen.map((m) => (
                 <button key={m.id} className="block w-full text-left" onClick={() => setCobrar(m)}>
                   <Row left={<><Clock size={13} className="mr-1.5 inline text-warn" />{m.fecha.slice(5)} · {m.concepto}</>} sub={m.cliente || L.nombreBarbero(d, m.barberoId)} right={fmt(m.monto)} />
                 </button>
               ))}
-            </Card>
+            </Plegable>
           )}
           {com.length > 0 && (
-            <Card title="Comisiones de barberos (gasto variable)">
+            <Plegable title="Comisiones de barberos" resumen={`Gasto variable del período · ${fmt(com.reduce((t, x) => t + x.comision, 0))}`} icono={<Users size={18} />}>
               {com.map((x) => <Row key={x.barbero.id} left={x.barbero.nombre} right={<span className="text-ko">-{fmt(x.comision)}</span>} />)}
-            </Card>
+            </Plegable>
           )}
           <Registrar d={d} />
         </div>
@@ -162,7 +163,7 @@ function Registrar({ d }: { d: AppData }) {
     if (await run(async () => { await M.guardarMovimiento(sb, d, x, crypto.randomUUID()); return 'Guardado'; }, ['ingresos', 'gastos', 'productos', 'mov_stock'])) set({ concepto: '', monto: '' });
   };
   return (
-    <Card title="Registrar">
+    <Plegable title="Registrar" resumen="Cargar un ingreso o un gasto" icono={<Plus size={18} />}>
       <Field label="Tipo">{(id) => (
         <Select id={id} value={x.clave} onChange={(e) => set({ clave: e.target.value })}>
           <option value="ing|servicio">Ingreso · servicio</option><option value="ing|producto">Ingreso · producto</option><option value="gas|fijo">Gasto fijo</option><option value="gas|variable">Gasto variable</option>
@@ -177,6 +178,6 @@ function Registrar({ d }: { d: AppData }) {
         <Field label="Barbero">{(id) => <Select id={id} value={x.barbero} onChange={(e) => set({ barbero: e.target.value })}><option value="">Sin barbero</option>{d.barberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}</Select>}</Field>
       )}
       <Button className="w-full" disabled={ocupado} onClick={guardar}>Guardar</Button>
-    </Card>
+    </Plegable>
   );
 }

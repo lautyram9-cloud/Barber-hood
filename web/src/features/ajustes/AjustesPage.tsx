@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, Camera, Download, History, LogOut, Send, Trash2, Upload } from 'lucide-react';
+import { Bell, BellOff, CalendarClock, Camera, Download, History, LogOut, Scissors, Send, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
 import type { AppData, Barbero } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
@@ -8,6 +8,7 @@ import { fetchAll, rpc, sb } from '@/lib/supabase';
 import { guardarArchivo } from '@/lib/files';
 import { quitarFoto, subirFoto } from '@/lib/fotos';
 import { Avatar } from '@/components/ui/Avatar';
+import { Plegable } from '@/components/ui/simple';
 import { activarAvisos, desactivarAvisos, estadoAvisos, probarAvisos, type EstadoAvisos } from '@/lib/push';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { tableKey } from '@/state/data';
@@ -66,7 +67,7 @@ export function AjustesPage({ d, email, owner, me = null, onSignOut }: { d: AppD
           <Button variant="outline" onClick={onSignOut}><LogOut size={16} /> Cerrar sesión</Button>
         </Card>
         {owner && (
-          <Card title="Copias y control">
+          <Plegable title="Copias y control" resumen="Copia de seguridad, restaurar e historial de cambios" icono={<ShieldCheck size={18} />}>
             <div className="grid gap-2">
               <Button variant="outline" onClick={backup}><Download size={16} /> Descargar copia de seguridad</Button>
               <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label="Archivo de copia de seguridad" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) restaurar(f); }} />
@@ -74,13 +75,17 @@ export function AjustesPage({ d, email, owner, me = null, onSignOut }: { d: AppD
               <Button variant="outline" onClick={() => setAud(true)}><History size={16} /> Historial de cambios</Button>
             </div>
             <p className="mt-3 text-xs text-subtle">La copia incluye todos los datos en un archivo. Guardala en un lugar seguro. Al restaurar, solo se recupera lo que falta: no se pisa ni se borra nada de lo que ya existe.</p>
-          </Card>
+          </Plegable>
         )}
       </div>
       {(owner || me) && <Avisos barbero={!owner} />}
-      {owner && <Disponibilidad d={d} />}
-      {owner && <Barberos d={d} />}
-      {owner && <Servicios d={d} />}
+      {owner && (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <Plegable title="Disponibilidad" resumen="Días y horarios de atención" icono={<CalendarClock size={18} />}><Disponibilidad d={d} /></Plegable>
+          <Plegable title="Barberos y comisión" resumen={`${d.barberos.length} ${d.barberos.length == 1 ? 'barbero' : 'barberos'} · fotos y comisiones`} icono={<Users size={18} />}><Barberos d={d} /></Plegable>
+          <Plegable title="Servicios y comisión" resumen={`${d.servicios.length} ${d.servicios.length == 1 ? 'servicio' : 'servicios'} con precio y comisión`} icono={<Scissors size={18} />}><Servicios d={d} /></Plegable>
+        </div>
+      )}
       {aud && <Auditoria d={d} onClose={() => setAud(false)} />}
     </div>
   );
@@ -122,7 +127,7 @@ function Disponibilidad({ d }: { d: AppData }) {
   const { run, ocupado } = useAccion(), { toast } = useFeedback();
   const guardar = () => { const r = A.filasHorario(f); if ('error' in r) return toast(r.error); run(async () => { await A.guardarHorarios(sb, r.filas); return 'Horarios guardados'; }, ['horarios']); };
   return (
-    <Card title="Disponibilidad">
+    <div>
       <p className="mb-3 text-xs text-muted">Podés poner varios tramos por día separados por coma (ej. 10:00-13:00, 15:00-20:00). Los minutos de cada turno se definen por barbero, abajo.</p>
       {A.ORDEN_DIAS.map((x) => (
         <div key={x} className="flex items-center gap-3 border-t border-line py-2 first:border-t-0">
@@ -131,7 +136,7 @@ function Disponibilidad({ d }: { d: AppData }) {
         </div>
       ))}
       <Button className="mt-3 w-full" disabled={ocupado} onClick={guardar}>Guardar horarios</Button>
-    </Card>
+    </div>
   );
 }
 
@@ -140,7 +145,7 @@ function Barberos({ d }: { d: AppData }) {
   const { run, ocupado } = useAccion();
   const agregar = () => { if (!n.trim()) return; run(async () => { await A.agregarBarbero(sb, n, m, e); setN(''); setM(''); setE(''); return 'Barbero agregado'; }, ['barberos']); };
   return (
-    <Card title="Barberos y comisión">
+    <div>
       <p className="mb-3 text-xs text-muted">Prioridad: excepción del barbero &gt; % general del barbero &gt; % del servicio o producto.</p>
       {d.barberos.map((b) => <FichaBarbero key={b.id} d={d} b={b} />)}
       <div className="mt-4 grid gap-x-3 sm:grid-cols-3">
@@ -149,7 +154,7 @@ function Barberos({ d }: { d: AppData }) {
         <Field label="Email de su usuario (opcional)">{(id) => <Input id={id} type="email" value={e} onChange={(x) => setE(x.target.value)} />}</Field>
       </div>
       <Button className="w-full" disabled={ocupado} onClick={agregar}>Agregar barbero</Button>
-    </Card>
+    </div>
   );
 }
 
@@ -210,7 +215,7 @@ function Servicios({ d }: { d: AppData }) {
   const { run, ocupado } = useAccion(), { confirmar } = useFeedback();
   const agregar = () => { if (!x.n.trim()) return; run(async () => { await A.agregarServicio(sb, x.n, x.p, x.c, x.du); setX({ n: '', p: '', c: '', du: '' }); return 'Servicio agregado'; }, ['servicios']); };
   return (
-    <Card title="Servicios y comisión">
+    <div>
       {d.servicios.map((s) => (
         <Row key={s.id} left={s.nombre} sub={`${fmt(s.precio)} · comisión ${s.comisionPct}% · ${s.duracionMin ? s.duracionMin + ' min' : 'duración según barbero'}`} right={
           <button aria-label={`Quitar ${s.nombre}`} className="p-2 text-subtle hover:text-ko" onClick={async () => { if (await confirmar({ titulo: `¿Quitar el servicio ${s.nombre}?`, accion: 'Quitar', peligro: true })) run(async () => { await A.quitarServicio(sb, s.id); }, ['servicios']); }}><Trash2 size={16} /></button>
@@ -223,7 +228,7 @@ function Servicios({ d }: { d: AppData }) {
         <Field label="Duración (min, opcional)">{(id) => <Input id={id} type="number" value={x.du} onChange={(e) => setX({ ...x, du: e.target.value })} />}</Field>
       </div>
       <Button className="w-full" disabled={ocupado} onClick={agregar}>Agregar servicio</Button>
-    </Card>
+    </div>
   );
 }
 
