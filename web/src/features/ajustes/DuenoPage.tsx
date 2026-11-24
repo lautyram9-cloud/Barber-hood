@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { AppData, Movimiento } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
@@ -11,6 +11,7 @@ import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Kpi, cx } from '@/components/ui';
 import { Field, Input, Select } from '@/components/ui/form';
+import { Destacado, Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 
@@ -25,18 +26,14 @@ export function DuenoPage({ d }: { d: AppData }) {
     <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Dueño" subtitle="Resultado de la barbería y movimientos privados" />
       <PeriodBar />
-      <Card title="Resultado de la barbería">
-        <p className="text-xs text-subtle">Ingresos − gastos − comisiones − costo de productos vendidos − pérdidas</p>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-          <p className="text-sm text-muted">Ingresos {fmt(r.ingresos)} · Gastos {fmt(r.gastosFijos + r.gastosVariables)} · Comisiones {fmt(r.comisiones)} · Costo prod. {fmt(r.costoProductos)} · Pérdidas {fmt(r.perdidas)}</p>
-          <p className={cx('num text-2xl font-semibold', r.neto >= 0 ? 'text-ok' : 'text-ko')}>{fmt(r.neto)}</p>
-        </div>
-      </Card>
-      <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Mis ingresos y gastos (privado)</h2>
+      <Destacado label="Resultado de la barbería" value={fmt(r.neto)} tone={r.neto >= 0 ? 'ok' : 'ko'}
+        hint={<>Ingresos {fmt(r.ingresos)} · Gastos {fmt(r.gastosFijos + r.gastosVariables)} · Comisiones {fmt(r.comisiones)} · Costo prod. {fmt(r.costoProductos)} · Pérdidas {fmt(r.perdidas)}
+          <span className="mt-1 block text-xs text-subtle">Ingresos − gastos − comisiones − costo de productos vendidos − pérdidas</span></>} />
+      <h2 className="pt-2 text-[15px] font-semibold">Mis ingresos y gastos (privado)</h2>
       <div className="grid grid-cols-3 gap-3"><Kpi label="Ingresos" value={fmt(t.ingresos)} tone="ok" /><Kpi label="Gastos" value={fmt(t.gastos)} tone="ko" /><Kpi label="Neto" value={fmt(t.neto)} /></div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <Card className="lg:col-span-2">{M.length ? M.map((m) => <Fila key={m.id} m={m} />) : <Empty>Sin movimientos.</Empty>}</Card>
-        <Card title="Registrar">
+        <Plegable title="Registrar" resumen="Cargar un ingreso o gasto privado" icono={<Plus size={18} />}>
           <div className="grid grid-cols-2 gap-x-3">
             <Field label="Tipo">{(id) => <Select id={id} value={x.tipo} onChange={(e) => setX({ ...x, tipo: e.target.value })}><option value="ing">Ingreso</option><option value="gas">Gasto</option></Select>}</Field>
             <Field label="Monto">{(id) => <Input id={id} type="number" inputMode="decimal" value={x.monto} onChange={(e) => setX({ ...x, monto: e.target.value })} />}</Field>
@@ -44,7 +41,7 @@ export function DuenoPage({ d }: { d: AppData }) {
           <Field label="Concepto">{(id) => <Input id={id} value={x.concepto} onChange={(e) => setX({ ...x, concepto: e.target.value })} />}</Field>
           <Field label="Fecha">{(id) => <Input id={id} type="date" value={x.fecha} onChange={(e) => setX({ ...x, fecha: e.target.value })} />}</Field>
           <Button className="w-full" disabled={ocupado} onClick={guardar}>Guardar</Button>
-        </Card>
+        </Plegable>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fixtures } from '../fixtures';
 import { mockSupabase, type Permitidas } from './mock-supabase';
+import { abrir, cerrar } from './ui';
 
 const NOW_ISO = '2026-11-12T15:37:00-03:00', NOW = Date.parse(NOW_ISO), DATA = fixtures(42, NOW_ISO);
 const OWNER = { id: 'usr-owner', email: 'duenio@prueba.test', rol: 'owner' as const };
@@ -19,6 +20,7 @@ async function entrar(page: Page, ruta: string, permitidas: Permitidas) {
 
 test('Ajustes: horarios (con validación), barbero con usuario y servicio', async ({ page }) => {
   const log = await entrar(page, 'aj', { 'rpc guardar_horarios': null, 'POST barberos': { id: 'bar-nuevo' }, 'rpc vincular_barbero': null, 'POST servicios': '' });
+  await abrir(page, 'Disponibilidad');
   await page.getByLabel('Horario del Mar').fill('cualquier cosa');
   await page.locator('label', { hasText: 'Mar' }).getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Guardar horarios' }).click();
@@ -29,6 +31,8 @@ test('Ajustes: horarios (con validación), barbero con usuario y servicio', asyn
   await expect(page.getByRole('status').filter({ hasText: 'Horarios guardados' })).toBeVisible();
   const p = (log.bodies[0].body as { p: { dia: number; desde: string; hasta: string }[] }).p;
   expect(p.filter((x) => x.dia == 2)).toEqual([{ dia: 2, desde: '09:00', hasta: '13:00' }, { dia: 2, desde: '16:00', hasta: '21:00' }]);
+  await cerrar(page);
+  await abrir(page, 'Barberos y comisión');
   await page.getByLabel('Nombre del barbero').fill('Tomi');
   await page.getByLabel('Minutos por turno').fill('40');
   await page.getByLabel('Email de su usuario (opcional)').fill('tomi@prueba.test');
@@ -38,6 +42,8 @@ test('Ajustes: horarios (con validación), barbero con usuario y servicio', asyn
     { op: 'POST barberos', body: { nombre: 'Tomi', slot_min: 40 }, query: '?select=id' },
     { op: 'rpc vincular_barbero', body: { p_barbero: 'bar-nuevo', p_email: 'tomi@prueba.test' } },
   ]);
+  await cerrar(page);
+  await abrir(page, 'Servicios y comisión');
   await page.getByLabel('Servicio', { exact: true }).fill('Lavado');
   await page.getByLabel('Precio', { exact: true }).fill('3000');
   await page.getByRole('button', { name: 'Agregar servicio' }).click();
@@ -48,6 +54,7 @@ test('Ajustes: horarios (con validación), barbero con usuario y servicio', asyn
 test('Ajustes: copia de seguridad con todas las tablas', async ({ page }, info) => {
   test.skip(info.project.name !== 'escritorio', 'descarga en escritorio');
   await entrar(page, 'aj', {});
+  await abrir(page, 'Copias y control');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Descargar copia de seguridad' }).click()]);
   expect(dl.suggestedFilename()).toBe('barberhood-copia-2026-11-12.json');
   const j = JSON.parse(await (await import('node:fs/promises')).readFile(await dl.path(), 'utf8'));
@@ -58,6 +65,7 @@ test('Ajustes: copia de seguridad con todas las tablas', async ({ page }, info) 
 
 test('Dueño: movimiento privado', async ({ page }) => {
   const log = await entrar(page, 'due', { 'POST dueno_mov': '' });
+  await abrir(page, 'Registrar');
   await page.getByLabel('Tipo').selectOption('gas');
   await page.getByLabel('Monto').fill('7000');
   await page.getByLabel('Concepto').fill('Nafta');
@@ -72,6 +80,7 @@ test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nun
 
   test('simula, muestra qué falta, pide confirmación y recién ahí aplica', async ({ page }) => {
     const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 2, turnos: 1, clientes: 0 } });
+    await abrir(page, 'Copias y control');
     await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
     const dlg = page.getByRole('alertdialog');
     await expect(dlg).toContainText('Se van a agregar: turnos: 1, ingresos: 2');
@@ -86,6 +95,7 @@ test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nun
 
   test('cancelar no escribe nada', async ({ page }) => {
     const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 1 } });
+    await abrir(page, 'Copias y control');
     await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
     await page.getByRole('alertdialog').getByRole('button', { name: 'Cancelar' }).click();
     await expect(page.getByRole('alertdialog')).toBeHidden();
@@ -94,6 +104,7 @@ test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nun
 
   test('si no falta nada, avisa y no pide confirmar', async ({ page }) => {
     const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 0, turnos: 0 } });
+    await abrir(page, 'Copias y control');
     await page.getByLabel('Archivo de copia de seguridad').setInputFiles(copia());
     await toastDe(page, 'No falta nada: todo lo de la copia ya está');
     await expect(page.getByRole('alertdialog')).toBeHidden();
@@ -102,6 +113,7 @@ test.describe('Ajustes: restaurar copia de seguridad (recupera lo que falta, nun
 
   test('archivos inválidos se rechazan sin llamar a la base', async ({ page }) => {
     const log = await entrar(page, 'aj', { 'rpc restaurar_respaldo': { ingresos: 1 } });
+    await abrir(page, 'Copias y control');
     await page.getByLabel('Archivo de copia de seguridad').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('esto no es json') });
     await toastDe(page, 'El archivo no es una copia válida');
     await page.getByLabel('Archivo de copia de seguridad').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"version":2,"ingresos":[]}') });
@@ -131,6 +143,7 @@ test('Ajustes: el dueño sube la foto de un barbero (se achica a JPG y queda gua
     const blob = await new Promise<Blob>((ok) => c.toBlob((x) => ok(x!), 'image/png'));
     return Array.from(new Uint8Array(await blob.arrayBuffer()));
   });
+  await abrir(page, 'Barberos y comisión');
   await page.getByLabel(`Archivo de foto de ${b.nombre}`).setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png) });
   await expect(page.getByRole('status').filter({ hasText: 'Foto actualizada' })).toBeVisible();
   const sub = log.bodies.find((x) => x.op == 'POST storage')!;
@@ -148,6 +161,7 @@ test('Ajustes: si la base no tiene el espacio de fotos, avisa y no cambia nada',
     const blob = await new Promise<Blob>((ok) => c.toBlob((x) => ok(x!), 'image/png'));
     return Array.from(new Uint8Array(await blob.arrayBuffer()));
   });
+  await abrir(page, 'Barberos y comisión');
   await page.getByLabel(`Archivo de foto de ${b.nombre}`).setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png) });
   await expect(page.getByRole('status').filter({ hasText: 'No se pudo subir la foto' })).toBeVisible();
   expect(log.bodies).toEqual([]);

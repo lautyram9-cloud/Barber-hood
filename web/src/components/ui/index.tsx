@@ -7,7 +7,7 @@ export function Card({ title, action, children, className }: { title?: ReactNode
     <section className={cx('rounded-2xl border border-line bg-surface p-4 sm:p-5', className)}>
       {(title || action) && (
         <header className="mb-3 flex items-center justify-between gap-3">
-          {title && <h2 className="text-[13px] font-medium uppercase tracking-[0.08em] text-muted">{title}</h2>}
+          {title && <h2 className="text-[15px] font-semibold text-fg">{title}</h2>}
           {action}
         </header>
       )}
@@ -19,8 +19,8 @@ export function Card({ title, action, children, className }: { title?: ReactNode
 export function Kpi({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'ok' | 'ko' | 'accent' }) {
   return (
     <div className="min-w-0 rounded-2xl border border-line bg-surface p-3 sm:p-4">
-      <p className="truncate text-xs text-muted">{label}</p>
-      <p className={cx('num mt-1 truncate text-[17px] font-semibold tracking-tight sm:text-2xl', tone === 'ok' && 'text-ok', tone === 'ko' && 'text-ko', tone === 'accent' && 'text-accent')}>{value}</p>
+      <p className="truncate text-[13px] text-muted">{label}</p>
+      <p className={cx('num mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl', tone === 'ok' && 'text-ok', tone === 'ko' && 'text-ko', tone === 'accent' && 'text-accent')}>{value}</p>
       {hint && <div className="mt-1 text-xs">{hint}</div>}
     </div>
   );
@@ -46,10 +46,10 @@ export function Row({ left, sub, right, className }: { left: ReactNode; sub?: Re
   return (
     <div className={cx('flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0 first:pt-0 last:pb-0', className)}>
       <div className="min-w-0">
-        <div className="truncate text-sm">{left}</div>
-        {sub && <div className="truncate text-xs text-muted">{sub}</div>}
+        <div className="truncate text-[15px] font-medium">{left}</div>
+        {sub && <div className="truncate text-[13px] text-muted">{sub}</div>}
       </div>
-      {right !== undefined && <div className="num shrink-0 text-sm font-medium">{right}</div>}
+      {right !== undefined && <div className="num shrink-0 text-[15px] font-semibold">{right}</div>}
     </div>
   );
 }

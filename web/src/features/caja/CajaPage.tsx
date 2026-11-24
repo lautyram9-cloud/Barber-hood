@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Unlock } from 'lucide-react';
+import { ArrowLeftRight, History, Lock, Unlock, Wallet } from 'lucide-react';
 import type { AppData } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as K from '@/domain/caja';
@@ -9,6 +9,7 @@ import { useAccion, useFeedback } from '@/state/feedback';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Kpi, Row, cx } from '@/components/ui';
 import { Field, Input, Select } from '@/components/ui/form';
+import { Destacado, Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 const hora = (iso: string) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -32,12 +33,12 @@ export function CajaPage({ d }: { d: AppData }) {
   };
 
   const historial = (
-    <Card title="Historial de cierres">
+    <Plegable title="Historial de cierres" resumen={hist.length ? `${hist.length} ${hist.length == 1 ? 'cierre' : 'cierres'} · último ${dia(hist[0].apertura_at)}` : 'Sin cierres todavía'} icono={<History size={18} />}>
       {hist.length ? hist.map((x) => (
         <Row key={x.id} left={dia(x.apertura_at)} sub={`Esperado ${fmt(+x.esperado!)} · contado ${fmt(+x.contado!)}`}
           right={<span className={cx(+x.diferencia! > 0 && 'text-ok', +x.diferencia! < 0 && 'text-ko')}>{+x.diferencia! > 0 ? '+' : ''}{fmt(+x.diferencia!)}</span>} />
       )) : <Empty>Sin cierres.</Empty>}
-    </Card>
+    </Plegable>
   );
 
   if (!c) return (
@@ -57,18 +58,31 @@ export function CajaPage({ d }: { d: AppData }) {
   return (
     <div className="space-y-4 lg:space-y-6">
       <PageHeader title="Caja" subtitle={`Abierta desde las ${hora(c.apertura_at)}`} />
-      <div className="grid grid-cols-3 gap-3">
-        <Kpi label="Esperado en caja" value={r ? fmt(r.esperado) : '—'} tone="accent" />
-        <Kpi label="Pend. de cobro" value={r ? fmt(r.pendiente_cobro) : '—'} />
-        <Kpi label="Abierta" value={hora(c.apertura_at)} />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <Card title="Detalle del efectivo">
+      <Destacado label="Esperado en caja" value={r ? fmt(r.esperado) : '—'} tone="accent"
+        hint={<>Abierta a las {hora(c.apertura_at)}{r && r.pendiente_cobro ? ` · ${fmt(r.pendiente_cobro)} pendiente de cobro` : ''}</>} />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Plegable title="Detalle del efectivo" resumen="Cómo se llega al esperado" icono={<Wallet size={18} />}>
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            <Kpi label="Esperado en caja" value={r ? fmt(r.esperado) : '—'} tone="accent" />
+            <Kpi label="Pend. de cobro" value={r ? fmt(r.pendiente_cobro) : '—'} />
+            <Kpi label="Abierta" value={hora(c.apertura_at)} />
+          </div>
           {r ? <>
             {K.detalleEfectivo(r).map(([k, v, s]) => <Row key={k} left={k} right={<span className={s > 0 ? 'text-ok' : 'text-ko'}>{s > 0 ? '+' : '-'}{fmt(v)}</span>} />)}
             <p className="mt-3 text-xs text-subtle">Transferencias {fmt(r.ing_transferencia)} · Tarjetas {fmt(r.ing_tarjeta)} (no entran al efectivo)</p>
           </> : <Empty>Calculando…</Empty>}
-        </Card>
+        </Plegable>
+        <Plegable title="Movimiento manual" resumen="Agregar o sacar efectivo (cambio, retiro)" icono={<ArrowLeftRight size={18} />}>
+            <div className="grid grid-cols-2 gap-x-3">
+              <Field label="Tipo">{(id) => <Select id={id} value={mt} onChange={(e) => setMt(e.target.value)}><option value="ingreso">Ingreso a caja</option><option value="egreso">Egreso de caja</option></Select>}</Field>
+              <Field label="Monto">{(id) => <Input id={id} type="number" inputMode="decimal" value={mm} onChange={(e) => setMm(e.target.value)} />}</Field>
+            </div>
+            <Field label="Concepto">{(id) => <Input id={id} placeholder="Ej. cambio, retiro" value={mc} onChange={(e) => setMc(e.target.value)} />}</Field>
+            <Button variant="outline" className="w-full" disabled={ocupado} onClick={mov}>Registrar</Button>
+        </Plegable>
+        {historial}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <div className="space-y-4 lg:space-y-6">
           <Card title="Cerrar caja (arqueo)">
             <Field label="Efectivo contado" hint={dif != null ? <span className={cx('font-medium', dif > 0 && 'text-ok', dif < 0 && 'text-ko')}>Diferencia: {dif > 0 ? '+' : ''}{fmt(dif)}</span> : undefined}>
@@ -77,17 +91,8 @@ export function CajaPage({ d }: { d: AppData }) {
             <Field label="Notas (opcional)">{(id) => <Input id={id} value={notas} onChange={(e) => setNotas(e.target.value)} />}</Field>
             <Button className="h-12 w-full" disabled={ocupado} onClick={cerrar}><Lock size={16} /> Cerrar caja</Button>
           </Card>
-          <Card title="Movimiento manual">
-            <div className="grid grid-cols-2 gap-x-3">
-              <Field label="Tipo">{(id) => <Select id={id} value={mt} onChange={(e) => setMt(e.target.value)}><option value="ingreso">Ingreso a caja</option><option value="egreso">Egreso de caja</option></Select>}</Field>
-              <Field label="Monto">{(id) => <Input id={id} type="number" inputMode="decimal" value={mm} onChange={(e) => setMm(e.target.value)} />}</Field>
-            </div>
-            <Field label="Concepto">{(id) => <Input id={id} placeholder="Ej. cambio, retiro" value={mc} onChange={(e) => setMc(e.target.value)} />}</Field>
-            <Button variant="outline" className="w-full" disabled={ocupado} onClick={mov}>Registrar</Button>
-          </Card>
         </div>
       </div>
-      {historial}
     </div>
   );
 }

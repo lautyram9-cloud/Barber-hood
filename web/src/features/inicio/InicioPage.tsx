@@ -1,8 +1,12 @@
-import { MessageCircle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, BarChart3, Bell, MessageCircle, Users } from 'lucide-react';
 import type { AppData, Turno } from '@/domain/model';
 import * as L from '@/domain/logic';
 import { useCajaResumen } from '@/state/data';
-import { Badge, Bars, Card, Empty, Kpi, Row } from '@/components/ui';
+import { Badge, Bars, Empty, Kpi, Row } from '@/components/ui';
+import { Destacado, ListaCorta, Plegable } from '@/components/ui/simple';
+import { TurnoRow } from '@/features/turnos/TurnoRow';
+import { TurnoDetalle } from '@/features/turnos/TurnoDetalle';
 
 // Inicio del dueño. Mismos indicadores y mismas fórmulas que V.ini de la versión estable.
 const DN = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -27,39 +31,37 @@ export function InicioPage({ d }: { d: AppData }) {
   const bn = (id: string) => L.nombreBarbero(d, id);
   const turnoSub = (x: Turno) => [x.servicios, bn(x.barberoId)].filter(Boolean).join(' · ');
 
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const turno = abierto ? d.turnos.find((x) => x.id == abierto) ?? d.turnosBaja.find((x) => x.id == abierto) : undefined;
+  const fila = (x: Turno, conFecha = false) => <TurnoRow key={x.id} d={d} t={x} conFecha={conFecha} onOpen={(t) => setAbierto(t.id)} />;
+
   return (
     <div className="space-y-4 lg:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">Inicio</h1>
+        <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">Inicio</h1>
         <p className="text-sm text-muted first-letter:uppercase">{new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <Kpi label="Facturación hoy" value={fmt(h.ingresos)} hint={pc == null ? undefined : <span className={pc >= 0 ? 'text-ok' : 'text-ko'}>{pc >= 0 ? '▲' : '▼'} {Math.abs(pc)}% vs ayer</span>} />
-        <Kpi label="Cobrado hoy" value={fmt(L.cobradoEnFecha(d, t))} tone="ok" />
-        <Kpi label="Gastos hoy" value={fmt(h.gastosFijos + h.gastosVariables)} tone="ko" />
+      {/* Lo importante, grande: cuánto se facturó hoy, la ganancia y la caja. */}
+      <Destacado label="Facturación hoy" value={fmt(h.ingresos)} hint={pc == null ? undefined : <span className={pc >= 0 ? 'text-ok' : 'text-ko'}>{pc >= 0 ? '▲' : '▼'} {Math.abs(pc)}% vs ayer</span>} />
+      <div className="grid grid-cols-2 gap-3">
         <Kpi label="Ganancia estimada" value={fmt(h.neto)} tone={h.neto >= 0 ? 'ok' : 'ko'} />
-        <Kpi label="Comisiones pendientes" value={fmt(L.comisionPendiente(d))} />
         <Kpi label="En caja" value={d.cajaAbierta ? (caja.data ? fmt(caja.data.esperado) : '…') : 'Cerrada'} tone="accent" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
         <div className="space-y-4 lg:col-span-3 lg:space-y-6">
-          <Card title={`Turnos de hoy (${hoy.length})`}>
-            {hoy.length ? hoy.map((x) => (
-              <Row key={x.id} left={<><span className="num text-muted">{x.hora}</span> · {x.cliente}</>} sub={turnoSub(x)} right={<EstadoBadge e={x.estado} />} />
-            )) : <Empty>No hay turnos hoy.</Empty>}
-          </Card>
+          <ListaCorta title="Turnos de hoy" items={hoy} render={(x) => fila(x)} vacio={<Empty>No hay turnos hoy.</Empty>} />
+        </div>
+        <div className="space-y-3 lg:col-span-2">
           {pend.length > 0 && (
-            <Card title={`Solicitudes pendientes (${pend.length})`}>
-              {pend.slice(0, 5).map((x) => (
-                <Row key={x.id} left={<><span className="num text-muted">{x.fecha.slice(5)} {x.hora}</span> · {x.cliente}</>} sub={`${turnoSub(x)} · ${x.duracionMin} min`} right={<EstadoBadge e={x.estado} />} />
-              ))}
-            </Card>
+            <Plegable title="Solicitudes pendientes" resumen={`${pend.length} para confirmar`} tone="warn" icono={<Bell size={18} />}>
+              {pend.map((x) => fila(x, true))}
+            </Plegable>
           )}
           {manana.length > 0 && (
-            <Card title={`Recordatorios de mañana (${manana.length})`}>
-              <p className="mb-2 text-xs text-muted">Se abre WhatsApp con el mensaje listo; solo tocás enviar.</p>
+            <Plegable title="Recordatorios de mañana" resumen={`${manana.length} ${manana.length == 1 ? 'turno' : 'turnos'} para avisar por WhatsApp`} icono={<MessageCircle size={18} />}>
+              <p className="mb-2 text-sm text-muted">Se abre WhatsApp con el mensaje listo; solo tocás enviar.</p>
               {manana.map((x) => (
                 <Row key={x.id} left={<><span className="num text-muted">{x.hora}</span> · {x.cliente}</>} sub={turnoSub(x)}
                   right={L.numeroWhatsApp(x.telefono) ? (
@@ -69,25 +71,33 @@ export function InicioPage({ d }: { d: AppData }) {
                     </a>
                   ) : <span className="text-xs text-subtle">sin teléfono</span>} />
               ))}
-            </Card>
+            </Plegable>
           )}
-        </div>
-        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
-          <Card title="Últimos 7 días · facturación">
+          <Plegable title="Más números de hoy" resumen="Cobrado, gastos, comisiones y últimos 7 días" icono={<BarChart3 size={18} />}>
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <Kpi label="Facturación hoy" value={fmt(h.ingresos)} />
+              <Kpi label="Cobrado hoy" value={fmt(L.cobradoEnFecha(d, t))} tone="ok" />
+              <Kpi label="Gastos hoy" value={fmt(h.gastosFijos + h.gastosVariables)} tone="ko" />
+              <Kpi label="Ganancia estimada" value={fmt(h.neto)} tone={h.neto >= 0 ? 'ok' : 'ko'} />
+              <Kpi label="Comisiones pendientes" value={fmt(L.comisionPendiente(d))} />
+              <Kpi label="En caja" value={d.cajaAbierta ? (caja.data ? fmt(caja.data.esperado) : '…') : 'Cerrada'} tone="accent" />
+            </div>
+            <p className="mb-2 text-sm font-semibold">Últimos 7 días · facturación</p>
             <Bars labels={dias.map((x) => x[0])} values={dias.map((x) => x[1])} format={(n) => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(Math.round(n)))} />
-          </Card>
-          <Card title="Barberos hoy">
+          </Plegable>
+          <Plegable title="Barberos hoy" resumen={ranking.length ? `${ranking[0].nombre} va primero · ${fmt(ranking[0].facturacion)}` : 'Sin barberos cargados'} icono={<Users size={18} />}>
             {ranking.length ? ranking.map((s) => (
               <Row key={s.id} left={s.nombre} sub={`${s.cortes} cortes · comisión ${fmt(s.comision)}`} right={fmt(s.facturacion)} />
             )) : <Empty>Cargá barberos en Ajustes.</Empty>}
-          </Card>
+          </Plegable>
           {bajo.length > 0 && (
-            <Card title="Poco stock">
-              {bajo.slice(0, 4).map((p) => <Row key={p.id} left={p.nombre} right={<span className="text-ko">{p.stock} u.</span>} />)}
-            </Card>
+            <Plegable title="Poco stock" resumen={`${bajo.length} ${bajo.length == 1 ? 'producto' : 'productos'} por reponer`} tone="ko" icono={<AlertTriangle size={18} />}>
+              {bajo.map((p) => <Row key={p.id} left={p.nombre} right={<span className="text-ko">{p.stock} u.</span>} />)}
+            </Plegable>
           )}
         </div>
       </div>
+      {turno && <TurnoDetalle key={turno.id} d={d} t={turno} owner me={null} onClose={() => setAbierto(null)} />}
     </div>
   );
 }

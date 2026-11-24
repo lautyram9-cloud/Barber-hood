@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ClipboardList, PackagePlus, Share2, ShoppingCart, Trash2, Truck } from 'lucide-react';
+import { AlertTriangle, ClipboardList, History, PackagePlus, Share2, ShoppingCart, Trash2, TrendingUp, Truck } from 'lucide-react';
 import type { AppData, Producto } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as S from '@/domain/stock';
@@ -11,6 +11,7 @@ import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Kpi, Row, cx } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
+import { Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 const TABLAS = ['productos', 'mov_stock', 'proveedores', 'gastos'] as const;
@@ -48,14 +49,16 @@ export function StockPage({ d }: { d: AppData }) {
       {r.bajos.length > 0 && <Card title={<span className="flex items-center gap-2 text-ko"><AlertTriangle size={14} /> Poco stock</span>}>{r.bajos.map((p) => fila(p))}</Card>}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         {r.categorias.length ? r.categorias.map((c) => (
-          <Card key={c} title={c}>{r.productos.filter((p) => (p.categoria || 'Otros') == c).map((p) => fila(p, `costo ${fmt(p.costo)} · venta ${fmt(p.precio)} · margen ${S.margenPct(p)}%${S.nombreProveedor(d, p.proveedorId) ? ' · ' + S.nombreProveedor(d, p.proveedorId) : ''}`))}</Card>
+          <Card key={c} title={c}>{r.productos.filter((p) => (p.categoria || 'Otros') == c).map((p) => fila(p, `Venta ${fmt(p.precio)}`))}</Card>
         )) : <Card><Empty>Sin productos. Agregá el primero con "Producto".</Empty></Card>}
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-        <Card title="Más vendidos del período">{r.masVendidos.length ? r.masVendidos.map(([n, q]) => <Row key={n} left={n} right={`${q} u.`} />) : <Empty>Sin ventas.</Empty>}</Card>
-        <Card title="Historial de movimientos" className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Plegable title="Más vendidos del período" resumen={r.masVendidos.length ? `${r.masVendidos[0][0]} · ${r.masVendidos[0][1]} u.` : 'Sin ventas en el período'} icono={<TrendingUp size={18} />}>
+          {r.masVendidos.length ? r.masVendidos.map(([n, q]) => <Row key={n} left={n} right={`${q} u.`} />) : <Empty>Sin ventas.</Empty>}
+        </Plegable>
+        <Plegable title="Historial de movimientos" resumen={`${r.movimientos.length} ${r.movimientos.length == 1 ? 'movimiento' : 'movimientos'} de stock`} icono={<History size={18} />}>
           {r.movimientos.length ? r.movimientos.map((x) => <Row key={x.id} left={`${x.fecha.slice(5)} · ${x.nombre}`} sub={S.detalleMovStock(d, x)} right={<span className={x.signo > 0 ? 'text-ok' : 'text-ko'}>{x.signo > 0 ? '+' : '-'}{x.cantidad} u.</span>} />) : <Empty>Sin movimientos.</Empty>}
-        </Card>
+        </Plegable>
       </div>
       {hoja?.t == 'nuevo' && <FormProducto d={d} onClose={cerrar} />}
       {hoja?.t == 'compra' && <Compra d={d} id={hoja.id} onClose={cerrar} />}
@@ -115,7 +118,8 @@ function Ficha({ d, p, onClose, onCompra }: { d: AppData; p: Producto; onClose()
   const hacer = async (fn: () => Promise<unknown>, msg: string) => { if (await run(async () => { await fn(); return msg; }, [...TABLAS])) onClose(); };
   return (
     <Sheet title={p.nombre} onClose={onClose}>
-      <p className="mb-4 text-sm text-muted">Stock {p.stock} · mínimo {p.stockMin || 0} · {S.ventasProducto(d, p)} ventas registradas</p>
+      <p className="mb-1 text-sm text-muted">Stock {p.stock} · mínimo {p.stockMin || 0} · {S.ventasProducto(d, p)} ventas registradas</p>
+      <p className="mb-4 text-sm text-muted">Costo {fmt(p.costo)} · venta {fmt(p.precio)} · margen {S.margenPct(p)}%{S.nombreProveedor(d, p.proveedorId) ? ' · ' + S.nombreProveedor(d, p.proveedorId) : ''}</p>
       <CamposProducto d={d} x={x} set={(v) => setX((o) => ({ ...o, ...v }))} nuevo={false} />
       <div className="mb-6 grid grid-cols-2 gap-2">
         <Button disabled={ocupado} onClick={() => { const e = S.validarProducto(x); if (e) return toast(e); hacer(() => S.actualizarProducto(sb, p.id, x), 'Producto actualizado'); }}>Guardar cambios</Button>

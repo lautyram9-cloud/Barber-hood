@@ -4,6 +4,7 @@ import { buildAppData } from '@/domain/build';
 import * as L from '@/domain/logic';
 import { fixtures, soloBarbero } from '../fixtures';
 import { mockSupabase, type MockUser } from './mock-supabase';
+import { abrir } from './ui';
 
 const NOW_ISO = '2026-11-12T15:37:00-03:00', NOW = Date.parse(NOW_ISO), HOY = '2026-11-12';
 const DATA = fixtures(42, NOW_ISO);
@@ -37,14 +38,29 @@ test('dueño: Inicio muestra los mismos números que calcula la lógica validada
   const log = await login(page, OWNER);
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible();
   const d = buildAppData(DATA), r = L.resultado(d, HOY, HOY), fmt = L.formatoPesos;
-  const kpi = (label: string) => page.locator('div', { has: page.getByText(label, { exact: true }) }).last();
+  const kpi = (label: string, en = page.locator('main')) => en.locator('div', { has: page.getByText(label, { exact: true }) }).last();
+  // Lo importante a la vista: facturación (destacada), ganancia y caja.
   await expect(kpi('Facturación hoy')).toContainText(fmt(r.ingresos));
-  await expect(kpi('Gastos hoy')).toContainText(fmt(r.gastosFijos + r.gastosVariables));
   await expect(kpi('Ganancia estimada')).toContainText(fmt(r.neto));
-  await expect(kpi('Comisiones pendientes')).toContainText(fmt(L.comisionPendiente(d)));
   await expect(kpi('En caja')).toContainText(d.cajaAbierta ? '$34.567' : 'Cerrada');
-  const hoy = d.turnos.filter((t) => t.fecha == HOY).length;
-  await expect(page.getByText(`Turnos de hoy (${hoy})`)).toBeVisible();
+  const hoy = d.turnos.filter((t) => t.fecha == HOY);
+  const turnos = page.locator('main section', { has: page.getByRole('heading', { name: 'Turnos de hoy' }) });
+  await expect(turnos.getByRole('heading')).toHaveText('Turnos de hoy');
+  if (hoy.length) await expect(turnos).toContainText(String(hoy.length));
+  await expect(turnos.locator('button').filter({ hasNotText: 'Ver todos' })).toHaveCount(Math.min(hoy.length, 4));
+  if (hoy.length > 4) {
+    await turnos.getByRole('button', { name: /Ver todos/ }).click();
+    const ultimo = [...hoy].sort((x, y) => x.hora.localeCompare(y.hora)).at(-1)!;
+    await expect(page.getByRole('dialog', { name: 'Turnos de hoy' }).getByText(ultimo.cliente).last(), 'la lista completa incluye el último turno').toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+  // El resto, al tocar "Más números de hoy": todos los indicadores, con los mismos valores.
+  const mas = await abrir(page, 'Más números de hoy');
+  await expect(kpi('Cobrado hoy', mas)).toContainText(fmt(L.cobradoEnFecha(d, HOY)));
+  await expect(kpi('Gastos hoy', mas)).toContainText(fmt(r.gastosFijos + r.gastosVariables));
+  await expect(kpi('Comisiones pendientes', mas)).toContainText(fmt(L.comisionPendiente(d)));
+  await expect(kpi('Facturación hoy', mas)).toContainText(fmt(r.ingresos));
+  await page.keyboard.press('Escape');
 
   // Mismas secciones que la versión estable para el dueño (11).
   if (isDesktop(page)) {
@@ -229,6 +245,7 @@ test.describe('costos solo para el dueño (etapa 11)', () => {
     await page.locator('main h1').first().waitFor();
     await page.goto('#/aj');
     await page.locator('main h1').first().waitFor();
+    await abrir(page, 'Copias y control');
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Descargar copia de seguridad' }).click()]);
     const j = JSON.parse(await (await import('node:fs/promises')).readFile(await dl.path(), 'utf8'));
     const real = DATA.productos!.find((p) => p.id == j.productos[0].id)!;

@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import type { RawTables } from '@/domain/model';
 import { fixtures } from '../fixtures';
 import { mockSupabase, type Permitidas } from './mock-supabase';
+import { abrir, cerrar } from './ui';
 
 const NOW_ISO = '2026-11-12T15:37:00-03:00', NOW = Date.parse(NOW_ISO), BASE = fixtures(42, NOW_ISO);
 const cerradas = BASE.cajas!.filter((c) => c.estado == 'cerrada');
@@ -32,13 +33,14 @@ test('caja abierta: esperado, hora local, movimiento manual y cierre con confirm
   const log = await entrar(page, { ...BASE, cajas: [...cerradas, ABIERTA] }, { 'POST caja_mov': '', 'rpc cerrar_caja': -567 });
   await expect(page.locator('main')).toContainText('$34.567'); // esperado que devuelve caja_resumen (simulado)
   await expect(page.locator('main')).toContainText('09:00'); // 12:00 UTC = 09:00 en Salta (la versión estable mostraba 12:00)
-  const mov = page.locator('section', { hasText: 'Movimiento manual' });
+  const mov = await abrir(page, 'Movimiento manual');
   await mov.getByLabel('Tipo').selectOption('egreso');
   await mov.getByLabel('Monto').fill('2000');
   await mov.getByLabel('Concepto').fill('Retiro');
   await mov.getByRole('button', { name: 'Registrar' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Registrado' })).toBeVisible();
   expect(log.bodies[0]).toMatchObject({ op: 'POST caja_mov', body: { caja_id: 'caja-abierta', tipo: 'egreso', concepto: 'Retiro', monto: 2000 } });
+  await cerrar(page);
   await page.getByLabel('Efectivo contado').fill('34000');
   await expect(page.locator('main')).toContainText('Diferencia: $-567');
   await page.getByRole('button', { name: 'Cerrar caja' }).click();

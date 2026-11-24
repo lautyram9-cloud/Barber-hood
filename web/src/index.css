@@ -2,7 +2,7 @@
 
 /* Sistema de diseño Barber Hood: oscuro, minimalista, acento azul eléctrico de la marca. */
 @theme {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --color-bg: #07090d;
   --color-surface: #0d1016;
   --color-surface-2: #131821;
