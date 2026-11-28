@@ -78,9 +78,27 @@ function FormIngreso({ d, owner, me, onDone }: { d: AppData; owner: boolean; me:
           </Select>
         )}</Field>
         <Field label="Fecha">{(id) => <Input id={id} type="date" value={x.fecha} onChange={(e) => set({ fecha: e.target.value })} />}</Field>
-        <Field label="Medio de pago">{(id) => <Select id={id} value={x.medio} onChange={(e) => set({ medio: e.target.value })}>{M.MEDIOS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>}</Field>
+        <Field label="Medio de pago">{(id) => (
+          <Select id={id} value={x.medio} onChange={(e) => set({ medio: e.target.value, ...(e.target.value == 'dividido' ? { cobrado: true, medio2: x.medio2 || 'transferencia' } : {}) })}>
+            {M.MEDIOS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            <option value="dividido">Dividido (efectivo + otro)</option>
+          </Select>
+        )}</Field>
       </div>
-      <Field label="Estado del cobro">{(id) => <Select id={id} value={x.cobrado ? '1' : '0'} onChange={(e) => set({ cobrado: e.target.value != '0' })}><option value="1">Cobrado ahora</option><option value="0">Pendiente de cobro</option></Select>}</Field>
+      {x.medio == 'dividido' ? (
+        <div className="mb-3.5 rounded-2xl border border-accent/30 bg-accent/[0.06] p-3">
+          <div className="grid grid-cols-2 gap-x-3">
+            <Field label="En efectivo">{(id) => <Input id={id} type="number" inputMode="decimal" value={x.efectivo ?? ''} onChange={(e) => set({ efectivo: e.target.value })} />}</Field>
+            <Field label="El resto por">{(id) => <Select id={id} value={x.medio2 || 'transferencia'} onChange={(e) => set({ medio2: e.target.value })}><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option></Select>}</Field>
+          </div>
+          <p className="num text-sm" aria-live="polite">
+            Total {L.formatoPesos(M.totalIngresoRapido(x))} = efectivo {L.formatoPesos(+(x.efectivo ?? '') || 0)} + {x.medio2 == 'tarjeta' ? 'tarjeta' : 'transferencia'}{' '}
+            <b>{L.formatoPesos(Math.max(0, M.totalIngresoRapido(x) - (+(x.efectivo ?? '') || 0)))}</b>
+          </p>
+        </div>
+      ) : (
+        <Field label="Estado del cobro">{(id) => <Select id={id} value={x.cobrado ? '1' : '0'} onChange={(e) => set({ cobrado: e.target.value != '0' })}><option value="1">Cobrado ahora</option><option value="0">Pendiente de cobro</option></Select>}</Field>
+      )}
       <Button className="mt-1 h-12 w-full" disabled={ocupado} onClick={guardar}>Registrar ingreso</Button>
     </>
   );

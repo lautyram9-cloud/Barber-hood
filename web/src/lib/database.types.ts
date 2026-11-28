@@ -23,6 +23,7 @@ export interface Rows {
     cobrado_at: string | null; comision_monto: Num | null; comision_pct: Num; concepto: string; costo_unit?: Num; creado_por: string | null;
     created_at: string; fecha: string; liquidacion_id: string | null; medio_pago: string; op_id: string; precio_unit: Num;
     producto_id: string | null; servicio_id: string | null; tipo: string; total: Num | null; turno_id: string | null;
+    pago2_medio?: string | null; pago2_monto?: Num | null;
   };
   liquidaciones: { id: string; adelantos: Num; barbero_id: string; bruto: Num; creado_por: string | null; created_at: string; desde: string | null; fecha: string; hasta: string; medio_pago: string; monto: Num };
   mov_stock: { id: string; cantidad: number; costo_unit: Num | null; creado_por: string | null; created_at: string; fecha: string; ingreso_id: string | null; medio_pago: string; nota: string | null; producto_id: string; proveedor: string | null; proveedor_id: string | null; tipo: string };

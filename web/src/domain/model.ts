@@ -39,6 +39,9 @@ export interface Movimiento {
   creadoPor?: string | null;
   /** Turno del que viene el cobro, si lo hay. */
   turnoId?: string | null;
+  /** Pago dividido: segunda parte (transferencia o tarjeta) y su monto. La primera parte es medioPago por el resto. */
+  pago2Medio?: string | null;
+  pago2Monto?: number | null;
 }
 
 export type EstadoTurno = 'pendiente' | 'confirmado' | 'atendido' | 'cancelado' | 'ausente' | string;
