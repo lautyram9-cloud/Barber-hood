@@ -26,3 +26,20 @@ export function debeAvisar(t: { estado: string; created_at: string } | null, aho
   const creado = Date.parse(t.created_at);
   return Number.isFinite(creado) && ahora - creado >= -60_000 && ahora - creado <= VENTANA_MS;
 }
+
+/** URL de la app en la sección Sueldos (comisiones y liquidaciones). */
+export const URL_SUELDOS = URL_APP.replace(/#\/tur$/, '#/sue');
+/** Aviso semanal para liquidar comisiones. */
+export const AVISO_LIQUIDAR = { title: 'Barber Hood', body: '¡Es momento de liquidar la semana!', url: URL_SUELDOS, tag: 'liquidar' };
+
+/**
+ * ¿Es momento del aviso semanal de liquidación? Sábados entre las 21:50 y las 23:00, hora de Argentina
+ * (UTC−3, sin horario de verano). Devuelve una clave única por semana (la fecha de ese sábado) para avisar
+ * una sola vez, o null si está fuera de la ventana. Así nadie puede usar la función para mandar avisos de más.
+ */
+export function ventanaLiquidar(ahora: number) {
+  const ar = new Date(ahora - 3 * 3600_000); // hora de Argentina expresada en los campos UTC
+  const min = ar.getUTCHours() * 60 + ar.getUTCMinutes();
+  if (ar.getUTCDay() !== 6 || min < 21 * 60 + 50 || min >= 23 * 60) return null;
+  return 'liquidar-' + ar.toISOString().slice(0, 10);
+}

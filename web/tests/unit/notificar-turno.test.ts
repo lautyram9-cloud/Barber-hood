@@ -38,3 +38,21 @@ describe('avisos en la app', () => {
     expect(esIOS('Mozilla/5.0 (Linux; Android 14)', 5)).toBe(false);
   });
 });
+
+describe('aviso semanal de liquidación', () => {
+  it('solo los sábados entre 21:50 y 23:00 hora de Argentina, con una clave por semana', async () => {
+    const { ventanaLiquidar, AVISO_LIQUIDAR } = await import('../../../supabase/functions/notificar-turno/avisos');
+    const ar = (iso: string) => Date.parse(iso + '-03:00');
+    expect(ventanaLiquidar(ar('2026-11-28T22:00:00'))).toBe('liquidar-2026-11-28'); // sábado 22:00
+    expect(ventanaLiquidar(Date.parse('2026-11-29T01:00:00Z'))).toBe('liquidar-2026-11-28'); // lo que dispara pg_cron (domingo 01:00 UTC)
+    expect(ventanaLiquidar(ar('2026-11-28T21:50:00'))).toBe('liquidar-2026-11-28');
+    expect(ventanaLiquidar(ar('2026-11-28T22:59:00'))).toBe('liquidar-2026-11-28');
+    expect(ventanaLiquidar(ar('2026-11-28T21:49:00'))).toBeNull();
+    expect(ventanaLiquidar(ar('2026-11-28T23:00:00'))).toBeNull();
+    expect(ventanaLiquidar(ar('2026-11-27T22:00:00'))).toBeNull(); // viernes
+    expect(ventanaLiquidar(ar('2026-11-29T22:00:00'))).toBeNull(); // domingo
+    expect(ventanaLiquidar(ar('2026-12-05T22:10:00'))).toBe('liquidar-2026-12-05'); // otra semana, otra clave
+    expect(AVISO_LIQUIDAR.body).toBe('¡Es momento de liquidar la semana!');
+    expect(AVISO_LIQUIDAR.url).toMatch(/#\/sue$/);
+  });
+});

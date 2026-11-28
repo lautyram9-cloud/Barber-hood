@@ -74,7 +74,7 @@ y reserva pública `#reservar`.
    del barbero y editar servicios, cuadros con dinero resaltados (`Kpi` con `data-dinero`), + ordenado por demanda (90 días).
 2. HECHO (PR parte 2): balance en Stock (`balanceStock`): vendido, costo de lo vendido, ganancia, comisiones, ganancia neta y compras del período.
 3. HECHO (PR parte 3): los cortes del dueño (barbero vinculado a su usuario) se suman solos a sus ingresos privados en Dueño (`cortesDelDueno`, calculado, no se guarda nada).
-4. Aviso push los sábados 22:00 (hora Argentina) "¡Es momento de liquidar la semana!": pg_cron + función. SQL a mostrar.
+4. PREPARADO (PR parte 4): aviso push sábados 22:00 AR "¡Es momento de liquidar la semana!". Desplegar la función notificar-turno actualizada (acción "liquidar") y ejecutar `supabase/etapa14-aviso-liquidar.sql` (pg_cron, `push_recordatorios`, tarea `bh-liquidar-semana` a las 01:00 UTC del domingo). Volver atrás: `select cron.unschedule('bh-liquidar-semana');`.
 5. Pago dividido en el + (efectivo + transferencia/tarjeta). SQL a mostrar (la caja suma efectivo por medio_pago).
 
 - **Fotos de barberos y reserva rediseñada** (etapa 13, sin ejecutar): ejecutar `supabase/etapa13-fotos-barberos.sql`
