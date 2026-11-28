@@ -59,7 +59,8 @@ test('Estadísticas: exporta CSV idéntico al de la versión estable', async ({ 
 });
 
 test('Barberos: ranking y registrar falta con confirmación', async ({ page }) => {
-  const log = await entrar(page, OWNER, 'bar', DATA, { 'POST asistencia': '' });
+  const log = await entrar(page, OWNER, 'sue', DATA, { 'POST asistencia': '' });
+  await page.getByRole('tab', { name: 'Rendimiento' }).click();
   const R = D.barberos.map((x) => L.statsBarbero(D, x.id, ...L.rango('sem', HOY))).sort((x, y) => y.facturacion - x.facturacion);
   const ranking = page.locator('section', { has: page.getByRole('heading', { name: 'Ranking de barberos' }) });
   for (const s of R) await expect(ranking).toContainText(s.nombre);

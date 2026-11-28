@@ -47,7 +47,9 @@ function FormIngreso({ d, owner, me, onDone }: { d: AppData; owner: boolean; me:
   const set = (p: Partial<M.IngresoRapido>) => setX((v) => ({ ...v, ...p }));
   const { run, ocupado } = useAccion();
   const { toast } = useFeedback();
-  const productos = d.productos.filter((p) => p.stock > 0);
+  // Lo más pedido primero (últimos 90 días).
+  const productos = M.porDemanda(d, d.productos.filter((p) => p.stock > 0), 'producto');
+  const servicios = M.porDemanda(d, d.servicios, 'servicio');
   const guardar = async () => {
     const err = M.validarIngresoRapido(x);
     if (err) return toast(err);
@@ -55,11 +57,11 @@ function FormIngreso({ d, owner, me, onDone }: { d: AppData; owner: boolean; me:
   };
   return (
     <>
-      {(d.servicios.length > 0 || productos.length > 0) && (
+      {(servicios.length > 0 || productos.length > 0) && (
         <>
-          <p className="mb-2 text-xs text-muted">Tocá para completar el precio</p>
+          <p className="mb-2 text-xs text-muted">Tocá para completar el precio · lo más pedido primero</p>
           <div className="mb-4 flex flex-wrap gap-2">
-            {d.servicios.map((s) => <Chip key={s.id} on={x.tipo == 'servicio' && x.concepto == s.nombre} onClick={() => set({ tipo: 'servicio', concepto: s.nombre, monto: String(s.precio), productoId: '' })}>{s.nombre} · {L.formatoPesos(s.precio)}</Chip>)}
+            {servicios.map((s) => <Chip key={s.id} on={x.tipo == 'servicio' && x.concepto == s.nombre} onClick={() => set({ tipo: 'servicio', concepto: s.nombre, monto: String(s.precio), productoId: '' })}>{s.nombre} · {L.formatoPesos(s.precio)}</Chip>)}
             {productos.map((p) => <Chip key={p.id} on={x.productoId == p.id} onClick={() => set({ tipo: 'producto', concepto: p.nombre, monto: String(p.precio), productoId: p.id })}><Package size={13} className="mr-1 inline" />{p.nombre} · {L.formatoPesos(p.precio)}</Chip>)}
           </div>
         </>

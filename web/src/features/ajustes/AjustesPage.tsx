@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, CalendarClock, Camera, Download, History, LogOut, Scissors, Send, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
-import type { AppData, Barbero } from '@/domain/model';
+import { Bell, BellOff, CalendarClock, Camera, Download, History, LogOut, Pencil, Scissors, Send, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
+import type { AppData, Barbero, Servicio } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
 import { fetchAll, rpc, sb } from '@/lib/supabase';
@@ -191,6 +191,7 @@ function FichaBarbero({ d, b }: { d: AppData; b: Barbero }) {
           if (await confirmar({ titulo: `¿Quitar a ${b.nombre}?`, texto: 'Deja de aparecer en turnos y ranking. Su historial se conserva.', accion: 'Quitar', peligro: true })) run(async () => { await A.quitarBarbero(sb, b.id); }, ['barberos']);
         }}><Trash2 size={16} /></button>
       </div>
+      <DatosBarbero b={b} />
       <div className="flex gap-2">
         <Input aria-label={`% general de ${b.nombre}`} type="number" placeholder="% general (vacío = el del servicio)" className="h-10" value={pct} onChange={(e) => setPct(e.target.value)} />
         <Button variant="outline" className="min-h-10 shrink-0" disabled={ocupado} onClick={() => run(async () => { await A.guardarPctGeneral(sb, b.id, pct); return 'Comisión general guardada'; }, ['barberos'])}>Guardar %</Button>
@@ -210,17 +211,70 @@ function FichaBarbero({ d, b }: { d: AppData; b: Barbero }) {
   );
 }
 
+/** Editar nombre, minutos por turno y usuario vinculado de un barbero. */
+function DatosBarbero({ b }: { b: Barbero }) {
+  const [n, setN] = useState(b.nombre), [m, setM] = useState(String(b.slotMin || 30)), [e, setE] = useState('');
+  const { run, ocupado } = useAccion(), { toast } = useFeedback();
+  const cambio = n.trim() != b.nombre || +m != (b.slotMin || 30);
+  const guardar = () => { const er = A.validarBarbero(n, m); if (er) return toast(er); run(async () => { await A.editarBarbero(sb, b.id, n, m); return 'Datos guardados'; }, ['barberos']); };
+  const vincular = () => { if (!/^\S+@\S+\.\S+$/.test(e.trim())) return toast('Poné un email válido'); run(async () => { await A.vincularUsuario(sb, b.id, e); setE(''); return 'Usuario vinculado'; }, ['barberos']); };
+  return (
+    <div className="mb-3 rounded-xl border border-line bg-bg/40 p-3">
+      <div className="grid grid-cols-[1fr_7rem] gap-x-2">
+        <Field label="Nombre">{(id) => <Input id={id} aria-label={`Nombre de ${b.nombre}`} className="h-10" value={n} onChange={(x) => setN(x.target.value)} />}</Field>
+        <Field label="Min. por turno">{(id) => <Input id={id} aria-label={`Minutos por turno de ${b.nombre}`} className="h-10" type="number" inputMode="numeric" value={m} onChange={(x) => setM(x.target.value)} />}</Field>
+      </div>
+      <Button variant="outline" className="min-h-10 w-full" disabled={ocupado || !cambio} onClick={guardar}>Guardar datos</Button>
+      {!b.userId && (
+        <div className="mt-3 flex gap-2">
+          <Input aria-label={`Email del usuario de ${b.nombre}`} placeholder="Email de su usuario para vincularlo" type="email" className="h-10" value={e} onChange={(x) => setE(x.target.value)} />
+          <Button variant="outline" className="min-h-10 shrink-0" disabled={ocupado} onClick={vincular}>Vincular</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Fila de servicio con edición en el lugar (nombre, precio, comisión y duración). */
+function FilaServicio({ s }: { s: Servicio }) {
+  const [ed, setEd] = useState(false);
+  const [x, setX] = useState({ n: s.nombre, p: String(s.precio), c: String(s.comisionPct), du: s.duracionMin ? String(s.duracionMin) : '' });
+  const { run, ocupado } = useAccion(), { toast, confirmar } = useFeedback();
+  const guardar = async () => {
+    const er = A.validarServicio(x.n, x.p, x.c, x.du); if (er) return toast(er);
+    if (await run(async () => { await A.editarServicio(sb, s.id, x.n, x.p, x.c, x.du); return 'Servicio guardado'; }, ['servicios'])) setEd(false);
+  };
+  if (!ed) return (
+    <Row left={s.nombre} sub={`${fmt(s.precio)} · comisión ${s.comisionPct}% · ${s.duracionMin ? s.duracionMin + ' min' : 'duración según barbero'}`} right={
+      <span className="flex items-center">
+        <button aria-label={`Editar ${s.nombre}`} className="p-2 text-subtle hover:text-accent" onClick={() => setEd(true)}><Pencil size={16} /></button>
+        <button aria-label={`Quitar ${s.nombre}`} className="p-2 text-subtle hover:text-ko" onClick={async () => { if (await confirmar({ titulo: `¿Quitar el servicio ${s.nombre}?`, accion: 'Quitar', peligro: true })) run(async () => { await A.quitarServicio(sb, s.id); }, ['servicios']); }}><Trash2 size={16} /></button>
+      </span>
+    } />
+  );
+  return (
+    <div className="border-t border-line py-3 first:border-t-0">
+      <div className="grid grid-cols-2 gap-x-3">
+        <Field label="Nombre">{(id) => <Input id={id} aria-label="Nombre del servicio" value={x.n} onChange={(e) => setX({ ...x, n: e.target.value })} />}</Field>
+        <Field label="Precio">{(id) => <Input id={id} aria-label="Precio del servicio" type="number" inputMode="decimal" value={x.p} onChange={(e) => setX({ ...x, p: e.target.value })} />}</Field>
+        <Field label="% comisión">{(id) => <Input id={id} aria-label="Comisión del servicio" type="number" value={x.c} onChange={(e) => setX({ ...x, c: e.target.value })} />}</Field>
+        <Field label="Duración (min)">{(id) => <Input id={id} aria-label="Duración del servicio" type="number" placeholder="según barbero" value={x.du} onChange={(e) => setX({ ...x, du: e.target.value })} />}</Field>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" onClick={() => setEd(false)}>Cancelar</Button>
+        <Button disabled={ocupado} onClick={guardar}>Guardar</Button>
+      </div>
+    </div>
+  );
+}
+
 function Servicios({ d }: { d: AppData }) {
   const [x, setX] = useState({ n: '', p: '', c: '', du: '' });
-  const { run, ocupado } = useAccion(), { confirmar } = useFeedback();
+  const { run, ocupado } = useAccion();
   const agregar = () => { if (!x.n.trim()) return; run(async () => { await A.agregarServicio(sb, x.n, x.p, x.c, x.du); setX({ n: '', p: '', c: '', du: '' }); return 'Servicio agregado'; }, ['servicios']); };
   return (
     <div>
-      {d.servicios.map((s) => (
-        <Row key={s.id} left={s.nombre} sub={`${fmt(s.precio)} · comisión ${s.comisionPct}% · ${s.duracionMin ? s.duracionMin + ' min' : 'duración según barbero'}`} right={
-          <button aria-label={`Quitar ${s.nombre}`} className="p-2 text-subtle hover:text-ko" onClick={async () => { if (await confirmar({ titulo: `¿Quitar el servicio ${s.nombre}?`, accion: 'Quitar', peligro: true })) run(async () => { await A.quitarServicio(sb, s.id); }, ['servicios']); }}><Trash2 size={16} /></button>
-        } />
-      ))}
+      {d.servicios.map((s) => <FilaServicio key={s.id} s={s} />)}
       <div className="mt-4 grid grid-cols-2 gap-x-3 sm:grid-cols-4">
         <Field label="Servicio">{(id) => <Input id={id} placeholder="Ej. Corte" value={x.n} onChange={(e) => setX({ ...x, n: e.target.value })} />}</Field>
         <Field label="Precio">{(id) => <Input id={id} type="number" value={x.p} onChange={(e) => setX({ ...x, p: e.target.value })} />}</Field>

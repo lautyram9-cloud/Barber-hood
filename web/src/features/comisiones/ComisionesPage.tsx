@@ -17,14 +17,13 @@ const fmt = L.formatoPesos;
 const TABLAS = ['liquidaciones', 'adelantos', 'ingresos'] as const;
 
 /** Comisiones del dueño (V.com): por período, liquidar, adelantos e historial con comprobante. */
-export function ComisionesPage({ d }: { d: AppData }) {
+export function ComisionesPage({ d, embebido = false }: { d: AppData; embebido?: boolean }) {
   const { per, ref } = usePeriod();
   const [a, b] = L.rango(per, ref), lista = comisionesPeriodo(d, a, b), total = lista.reduce((t, x) => t + x.comision, 0);
   const [liquidando, setLiquidando] = useState<string | null>(null), [viendo, setViendo] = useState<Liquidacion | null>(null);
   return (
     <div className="space-y-4 lg:space-y-6">
-      <PageHeader title="Comisiones" subtitle="Liquidaciones y adelantos" />
-      <PeriodBar />
+      {!embebido && <><PageHeader title="Comisiones" subtitle="Liquidaciones y adelantos" /><PeriodBar /></>}
       <Destacado label="Comisiones del período" value={fmt(total)} hint={`Pendiente de pagar en total: ${fmt(L.comisionPendiente(d))}`} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <Card title="Por barbero">

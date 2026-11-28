@@ -52,6 +52,26 @@ export async function agregarBarbero(db: Db, nombre: string, minutos: string, em
   const data = (await ok(db.from('barberos').insert({ nombre: nombre.trim(), slot_min: +minutos || 30 }).select('id').single())) as { id: string };
   if (email.trim()) await ok(db.rpc('vincular_barbero', { p_barbero: data.id, p_email: email.trim() }));
 }
+/** Valida los datos editables de un barbero. Devuelve el error o null. */
+export function validarBarbero(nombre: string, minutos: string) {
+  if (nombre.trim().length < 2) return 'Poné el nombre del barbero';
+  const m = +minutos;
+  if (!Number.isInteger(m) || m < 5 || m > 240) return 'Los minutos por turno van de 5 a 240';
+  return null;
+}
+export const editarBarbero = (db: Db, id: string, nombre: string, minutos: string) =>
+  ok(db.from('barberos').update({ nombre: nombre.trim(), slot_min: +minutos }).eq('id', id));
+export const vincularUsuario = (db: Db, id: string, email: string) => ok(db.rpc('vincular_barbero', { p_barbero: id, p_email: email.trim() }));
+/** Valida un servicio editado. Devuelve el error o null. */
+export function validarServicio(n: string, precio: string, pct: string, dur: string) {
+  if (!n.trim()) return 'Poné el nombre del servicio';
+  if (!(+precio >= 0) || precio === '') return 'Poné el precio';
+  if (pct !== '' && !(+pct >= 0 && +pct <= 100)) return 'La comisión va de 0 a 100%';
+  if (dur !== '' && !(Number.isInteger(+dur) && +dur >= 5 && +dur <= 480)) return 'La duración va de 5 a 480 minutos (o vacía)';
+  return null;
+}
+export const editarServicio = (db: Db, id: string, n: string, precio: string, pct: string, dur: string) =>
+  ok(db.from('servicios').update({ nombre: n.trim(), precio: +precio || 0, comision_pct: +pct || 0, duracion_min: dur === '' ? null : +dur }).eq('id', id));
 export const quitarBarbero = (db: Db, id: string) => ok(db.from('barberos').update({ activo: false }).eq('id', id));
 export const agregarServicio = (db: Db, n: string, precio: string, pct: string, dur: string) =>
   ok(db.from('servicios').insert({ nombre: n.trim(), precio: +precio || 0, comision_pct: +pct || 0, duracion_min: +dur || null }));

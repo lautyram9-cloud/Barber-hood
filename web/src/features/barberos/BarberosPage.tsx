@@ -7,14 +7,13 @@ import { Bars, Card, Empty, Row } from '@/components/ui';
 import { kf } from '@/components/ui/charts';
 import { FichaBarbero } from './FichaBarbero';
 
-export function BarberosPage({ d }: { d: AppData }) {
+export function BarberosPage({ d, embebido = false }: { d: AppData; embebido?: boolean }) {
   const { per, ref } = usePeriod();
   const [a, b] = L.rango(per, ref);
   const R = d.barberos.map((x) => L.statsBarbero(d, x.id, a, b)).sort((x, y) => y.facturacion - x.facturacion);
   return (
     <div className="space-y-4 lg:space-y-6">
-      <PageHeader title="Barberos" subtitle="Ranking y rendimiento por barbero" />
-      <PeriodBar />
+      {!embebido && <><PageHeader title="Barberos" subtitle="Ranking y rendimiento por barbero" /><PeriodBar /></>}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
         <Card title="Ranking de barberos" className="lg:col-span-2">
           {R.length ? R.map((s, i) => (

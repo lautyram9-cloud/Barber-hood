@@ -5,13 +5,12 @@ import { Button } from '@/components/ui';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { InicioPage } from '@/features/inicio/InicioPage';
 import { EstadisticasPage } from '@/features/estadisticas/EstadisticasPage';
-import { BarberosPage } from '@/features/barberos/BarberosPage';
+import { SueldosPage } from '@/features/sueldos/SueldosPage';
 import { MiPerfilPage } from '@/features/perfil/MiPerfilPage';
 import { TurnosPage } from '@/features/turnos/TurnosPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { MovimientosPage } from '@/features/movimientos/MovimientosPage';
 import { CajaPage } from '@/features/caja/CajaPage';
-import { ComisionesPage } from '@/features/comisiones/ComisionesPage';
 import { StockPage } from '@/features/stock/StockPage';
 import { DuenoPage } from '@/features/ajustes/DuenoPage';
 import { AjustesPage } from '@/features/ajustes/AjustesPage';
@@ -38,12 +37,13 @@ export function App() {
 }
 
 function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | null; email: string; onSignOut(): void }) {
-  const [route, navigate] = useHashRoute();
+  const [ruta, navigate] = useHashRoute();
+  const route = ruta == 'bar' || ruta == 'com' ? 'sue' : ruta; // enlaces viejos: ahora todo está en Sueldos
   const sections = sectionsFor(owner, !!me);
   const current = sections.find((s) => s.id === route) ?? sections[0];
   const { data, error, loading, refetch } = useAppData(owner);
 
-  useEffect(() => { if (route !== current.id) navigate(current.id); }, [route, current.id, navigate]);
+  useEffect(() => { if (ruta !== current.id) navigate(current.id); }, [ruta, current.id, navigate]);
 
   let body;
   if (error && !data) body = <Problem title="No se pudieron cargar los datos" actions={<Retry onClick={refetch} />}>{error.tabla ? `Error en la tabla "${error.tabla}": ` : ''}{String(error.message).slice(0, 120)}</Problem>;
@@ -51,14 +51,13 @@ function Authed({ owner, me, email, onSignOut }: { owner: boolean; me: string | 
   else if (current.id === 'ini') body = <InicioPage d={data} />;
   else if (current.id === 'tur') body = <TurnosPage d={data} owner={owner} me={me} />;
   else if (current.id === 'cli') body = <ClientesPage d={data} />;
-  else if (current.id === 'com') body = <ComisionesPage d={data} />;
   else if (current.id === 'stk') body = <StockPage d={data} />;
   else if (current.id === 'due') body = <DuenoPage d={data} />;
   else if (current.id === 'aj') body = <AjustesPage d={data} email={email} owner={owner} me={me} onSignOut={onSignOut} />;
   else if (current.id === 'cj') body = <CajaPage d={data} />;
   else if (current.id === 'caja') body = <MovimientosPage d={data} />;
   else if (current.id === 'est') body = <EstadisticasPage d={data} />;
-  else if (current.id === 'bar') body = <BarberosPage d={data} />;
+  else if (current.id === 'sue') body = <SueldosPage d={data} />;
   else if (current.id === 'me' && me) body = <MiPerfilPage d={data} me={me} />;
   else body = null;
 

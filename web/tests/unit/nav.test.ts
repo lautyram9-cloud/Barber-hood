@@ -11,8 +11,9 @@ function legacyTabs(owner: boolean, me: boolean) {
 }
 
 describe('navegación por rol', () => {
-  it('dueño: mismas secciones que la versión estable', () => {
-    expect(sectionsFor(true, false).map((s) => [s.id, s.label])).toEqual(legacyTabs(true, false));
+  it('dueño: mismas secciones que la versión estable, con Barberos y Comisiones unidas en Sueldos (cambio intencional)', () => {
+    const esperado = legacyTabs(true, false).flatMap(([id, l]) => (id == 'bar' ? [['sue', 'Sueldos']] : id == 'com' ? [] : [[id, l]]));
+    expect(sectionsFor(true, false).map((s) => [s.id, s.label])).toEqual(esperado);
   });
   it('barbero: mismas secciones que la versión estable, más Ajustes (cambio intencional: cuenta y avisos)', () => {
     expect(sectionsFor(false, true).map((s) => [s.id, s.label])).toEqual([...legacyTabs(false, true), ['aj', 'Ajustes']]);

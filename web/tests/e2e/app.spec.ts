@@ -62,14 +62,14 @@ test('dueño: Inicio muestra los mismos números que calcula la lógica validada
   await expect(kpi('Facturación hoy', mas)).toContainText(fmt(r.ingresos));
   await page.keyboard.press('Escape');
 
-  // Mismas secciones que la versión estable para el dueño (11).
+  // Mismas secciones que la versión estable para el dueño, con Barberos + Comisiones unidas en Sueldos (10).
   if (isDesktop(page)) {
-    await expect(page.locator('aside nav button')).toHaveCount(11);
+    await expect(page.locator('aside nav button')).toHaveCount(10);
   } else {
     const bar = page.locator('nav[aria-label="Secciones"]').last();
     await expect(bar.getByRole('button')).toHaveCount(5); // 4 + "Más"
     await bar.getByRole('button', { name: 'Más' }).click();
-    await expect(page.getByRole('dialog', { name: 'Más secciones' }).locator('.grid button')).toHaveCount(7);
+    await expect(page.getByRole('dialog', { name: 'Más secciones' }).locator('.grid button')).toHaveCount(6);
     await page.keyboard.press('Escape');
   }
   // La sesión se conserva al recargar (misma clave de sesión que la versión estable).
@@ -191,7 +191,7 @@ test('la versión estable sigue publicada intacta en /legacy/', async ({ request
 test('ninguna sección se desborda hacia los costados', async ({ page }) => {
   await login(page, OWNER);
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible();
-  for (const r of ['ini', 'tur', 'cli', 'cj', 'caja', 'stk', 'est', 'bar', 'com', 'due', 'aj']) {
+  for (const r of ['ini', 'tur', 'cli', 'cj', 'caja', 'stk', 'est', 'sue', 'due', 'aj']) {
     await page.goto('#/' + r);
     await page.locator('main h1').first().waitFor();
     const [sw, w] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
