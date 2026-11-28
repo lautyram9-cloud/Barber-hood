@@ -11,10 +11,12 @@
 //  - Las claves de avisos (VAPID) se generan solas la primera vez y se guardan en push_config, tabla que
 //    solo puede leer el servidor. Nadie tiene que copiar ni pegar claves secretas.
 //  - El texto del aviso no incluye el teléfono del cliente.
+//  - Aviso semanal "liquidar" (lo pide pg_cron los sábados 22:00 AR): solo dentro de esa ventana y una vez por
+//    semana (tabla push_recordatorios); va a los dispositivos de los dueños.
 
 import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 import webpush from 'npm:web-push@3.6.7';
-import { avisoReserva, debeAvisar, URL_APP } from './avisos.ts';
+import { AVISO_LIQUIDAR, avisoReserva, debeAvisar, URL_APP, ventanaLiquidar } from './avisos.ts';
 
 const VAPID_SUBJECT = 'https://lautyram9-cloud.github.io/Barber-hood/';
 const TOPE_POR_HORA = 20;
@@ -84,6 +86,20 @@ async function avisarReserva(sb: Sb, turnoId: string) {
   return { avisado: n > 0, destinos: n };
 }
 
+async function avisarLiquidar(sb: Sb) {
+  const clave = ventanaLiquidar(Date.now());
+  if (!clave) return { avisado: false, motivo: 'fuera de horario' };
+  const { error: dup } = await sb.from('push_recordatorios').insert({ clave });
+  if (dup) return { avisado: false, motivo: 'ya avisado' };
+  const { data: duenos } = await sb.from('perfiles').select('id').eq('rol', 'owner');
+  const ids = (duenos ?? []).map((d: { id: string }) => d.id);
+  if (!ids.length) return { avisado: false, motivo: 'sin destinatarios' };
+  const { data: subs } = await sb.from('push_subs').select('endpoint, p256dh, auth').in('user_id', ids);
+  const n = await enviar(sb, subs ?? [], AVISO_LIQUIDAR);
+  await sb.from('push_recordatorios').update({ destinos: n }).eq('clave', clave);
+  return { avisado: n > 0, destinos: n };
+}
+
 async function manejar(req: Request, env: (k: string) => string | undefined): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
@@ -103,6 +119,8 @@ async function manejar(req: Request, env: (k: string) => string | undefined): Pr
     const n = await enviar(sb, subs ?? [], { title: 'Barber Hood', body: 'Prueba: los avisos de reservas funcionan en este dispositivo', url: URL_APP, tag: 'prueba' });
     return json({ enviadas: n });
   }
+
+  if (body.accion === 'liquidar') return json(await avisarLiquidar(sb));
 
   if (typeof body.turno_id === 'string' && /^[0-9a-f-]{36}$/i.test(body.turno_id)) return json(await avisarReserva(sb, body.turno_id));
   return json({ error: 'Pedido inválido' }, 400);
