@@ -16,6 +16,19 @@ export function movimientosDueno(d: AppData, a: string, b: string): Movimiento[]
   return d.dueno.filter((x) => (x.fecha || '') >= a && (x.fecha || '') <= b).sort((x, y) => y.fecha.localeCompare(x.fecha))
     .map((x) => ({ id: x.id, tipo: x.tipo == 'ing' ? 'ing' : 'gas', categoria: '', concepto: x.concepto, monto: x.monto, fecha: x.fecha, medioPago: '', ts: x.ts } as Movimiento));
 }
+/** El perfil de barbero del dueño (el barbero vinculado a su usuario), si existe. */
+export const miBarbero = (d: AppData, userId: string | null) => (userId ? d.barberosTodos.find((b) => b.user_id == userId) ?? null : null);
+/**
+ * Los cortes (servicios) que hizo el dueño como barbero en [a, b]. Se suman solos a sus ingresos privados:
+ * no se guarda nada nuevo, se calculan de los ingresos ya registrados a su nombre.
+ */
+export function cortesDelDueno(d: AppData, userId: string | null, a: string, b: string) {
+  const yo = miBarbero(d, userId);
+  if (!yo) return null;
+  const movs = d.movs.filter((m) => m.tipo == 'ing' && m.categoria == 'servicio' && m.barberoId == yo.id && m.fecha >= a && m.fecha <= b)
+    .sort((x, y) => y.fecha.localeCompare(x.fecha) || y.ts - x.ts);
+  return { barbero: yo, movs, total: sumMonto(movs), cantidad: movs.reduce((t, m) => t + (m.cantidad || 1), 0) };
+}
 export const totalesDueno = (M: Movimiento[]) => { const i = sumMonto(M.filter((m) => m.tipo == 'ing')), g = sumMonto(M.filter((m) => m.tipo == 'gas')); return { ingresos: i, gastos: g, neto: i - g }; };
 export const validarDueno = (concepto: string, monto: string) => (!(+monto > 0) || !concepto.trim() ? 'Completá concepto y monto' : null);
 export const guardarDueno = (db: Db, tipo: string, concepto: string, monto: string, fecha: string) =>

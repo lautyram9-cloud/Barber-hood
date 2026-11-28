@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Scissors, Trash2 } from 'lucide-react';
 import type { AppData, Movimiento } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as A from '@/domain/ajustes';
 import { anular, cambiarFecha } from '@/domain/movimientos';
 import { sb } from '@/lib/supabase';
 import { usePeriod } from '@/state/period';
+import { useSession } from '@/state/session';
 import { useAccion, useFeedback } from '@/state/feedback';
 import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
-import { Button, Card, Empty, Kpi, cx } from '@/components/ui';
+import { Button, Card, Empty, Kpi, Row, cx } from '@/components/ui';
 import { Field, Input, Select } from '@/components/ui/form';
 import { Destacado, Plegable } from '@/components/ui/simple';
 
@@ -18,7 +19,11 @@ const fmt = L.formatoPesos;
 /** Panel privado del dueño (V.due). */
 export function DuenoPage({ d }: { d: AppData }) {
   const { per, ref } = usePeriod();
-  const [a, b] = L.rango(per, ref), r = L.resultado(d, a, b), M = A.movimientosDueno(d, a, b), t = A.totalesDueno(M);
+  const { session } = useSession();
+  const [a, b] = L.rango(per, ref), r = L.resultado(d, a, b), M = A.movimientosDueno(d, a, b), t0 = A.totalesDueno(M);
+  // Tus cortes como barbero se suman solos a tus ingresos privados.
+  const cortes = A.cortesDelDueno(d, session.status == 'ready' ? session.userId : null, a, b);
+  const t = { ingresos: t0.ingresos + (cortes?.total ?? 0), gastos: t0.gastos, neto: t0.neto + (cortes?.total ?? 0) };
   const [x, setX] = useState({ tipo: 'ing', concepto: '', monto: '', fecha: L.today() });
   const { run, ocupado } = useAccion(), { toast } = useFeedback();
   const guardar = () => { const e = A.validarDueno(x.concepto, x.monto); if (e) return toast(e); run(async () => { await A.guardarDueno(sb, x.tipo, x.concepto, x.monto, x.fecha); setX((v) => ({ ...v, concepto: '', monto: '' })); return 'Guardado'; }, ['dueno_mov']); };
@@ -30,7 +35,19 @@ export function DuenoPage({ d }: { d: AppData }) {
         hint={<>Ingresos {fmt(r.ingresos)} · Gastos {fmt(r.gastosFijos + r.gastosVariables)} · Comisiones {fmt(r.comisiones)} · Costo prod. {fmt(r.costoProductos)} · Pérdidas {fmt(r.perdidas)}
           <span className="mt-1 block text-xs text-subtle">Ingresos − gastos − comisiones − costo de productos vendidos − pérdidas</span></>} />
       <h2 className="pt-2 text-[15px] font-semibold">Mis ingresos y gastos (privado)</h2>
-      <div className="grid grid-cols-3 gap-3"><Kpi label="Ingresos" value={fmt(t.ingresos)} tone="ok" /><Kpi label="Gastos" value={fmt(t.gastos)} tone="ko" /><Kpi label="Neto" value={fmt(t.neto)} /></div>
+      <div className="grid grid-cols-3 gap-3">
+        <Kpi label="Ingresos" value={fmt(t.ingresos)} tone="ok" />
+        <Kpi label="Gastos" value={fmt(t.gastos)} tone="ko" /><Kpi label="Neto" value={fmt(t.neto)} />
+      </div>
+      {cortes?.total ? <p className="-mt-2 text-xs text-muted">Los ingresos incluyen {fmt(cortes.total)} de tus cortes.</p> : null}
+      {cortes ? (
+        <Plegable title="Mis cortes" resumen={cortes.cantidad ? `${cortes.cantidad} ${cortes.cantidad == 1 ? 'corte' : 'cortes'} en el período · ${fmt(cortes.total)}` : 'Sin cortes en el período'} tone="ok" icono={<Scissors size={18} />}>
+          <p className="mb-2 text-sm text-muted">Se suman solos a tus ingresos privados. Son los servicios registrados a tu nombre ({cortes.barbero.nombre}); no hace falta cargarlos acá.</p>
+          {cortes.movs.length ? cortes.movs.map((m) => <Row key={m.id} left={`${m.fecha.slice(8)}/${m.fecha.slice(5, 7)} · ${m.concepto}`} sub={[m.cliente, m.medioPago].filter(Boolean).join(' · ')} right={fmt(m.monto)} />) : <Empty>Sin cortes en el período.</Empty>}
+        </Plegable>
+      ) : (
+        <p className="rounded-2xl border border-line bg-surface p-4 text-sm text-muted">¿También cortás? Vinculá tu usuario a tu perfil de barbero (Ajustes → Barberos y comisión → Vincular) y tus cortes se van a sumar solos acá.</p>
+      )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <Card className="lg:col-span-2">{M.length ? M.map((m) => <Fila key={m.id} m={m} />) : <Empty>Sin movimientos.</Empty>}</Card>
         <Plegable title="Registrar" resumen="Cargar un ingreso o gasto privado" icono={<Plus size={18} />}>
