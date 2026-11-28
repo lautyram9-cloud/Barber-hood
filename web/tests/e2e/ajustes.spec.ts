@@ -201,3 +201,33 @@ test('Sueldos: une Comisiones y Rendimiento en una pestaña, y los montos se ven
   await expect(plata.first()).toContainText('$');
   await expect(page.locator('main div:not([data-dinero])', { has: page.getByText('Cortes', { exact: true }) }).last(), 'los que no son dinero quedan normales').toBeVisible();
 });
+
+test.describe('Dueño: tus cortes se suman solos', () => {
+  test('con tu usuario vinculado a un barbero, sus servicios del período se suman a tus ingresos', async ({ page }) => {
+    const b0 = DATA.barberos![0];
+    const datos = { ...DATA, barberos: DATA.barberos!.map((b) => (b.id == b0.id ? { ...b, user_id: OWNER.id } : b)) };
+    await page.clock.setFixedTime(NOW);
+    const log = await mockSupabase(page, datos, OWNER, NOW, {});
+    await page.goto('');
+    await page.getByLabel('Email').fill(OWNER.email); await page.getByLabel('Clave').fill('clave-de-prueba');
+    await page.getByRole('button', { name: 'Ingresar' }).click();
+    await page.locator('main h1').first().waitFor();
+    await page.goto('#/due');
+    await expect(page.getByRole('heading', { name: 'Dueño', level: 1 })).toBeVisible();
+    const { buildAppData } = await import('@/domain/build');
+    const A = await import('@/domain/ajustes'), L = await import('@/domain/logic');
+    const D2 = buildAppData(datos), [a, b] = L.rango('sem', '2026-11-12');
+    const c = A.cortesDelDueno(D2, OWNER.id, a, b)!, t = A.totalesDueno(A.movimientosDueno(D2, a, b));
+    const kpi = page.locator('main div', { has: page.getByText('Ingresos', { exact: true }) }).last();
+    await expect(kpi).toContainText(L.formatoPesos(t.ingresos + c.total));
+    const dlg = await abrir(page, 'Mis cortes');
+    for (const m of c.movs) await expect(dlg).toContainText(m.concepto);
+    expect(log.writes, 'se calcula: no se guarda nada').toEqual([]);
+  });
+
+  test('sin tu usuario vinculado, explica cómo vincularlo', async ({ page }) => {
+    await entrar(page, 'due', {});
+    await expect(page.locator('main')).toContainText('Vinculá tu usuario a tu perfil de barbero');
+    await expect(page.getByRole('button', { name: 'Mis cortes', exact: true })).toHaveCount(0);
+  });
+});
