@@ -16,9 +16,16 @@ export function Card({ title, action, children, className }: { title?: ReactNode
   );
 }
 
+/** ¿El valor es un monto de dinero? ($ 1.234, -$500, etc.) */
+export const esDinero = (v: ReactNode) => typeof v === 'string' && /\$/.test(v);
+
 export function Kpi({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'ok' | 'ko' | 'accent' }) {
+  // Los cuadros con dinero se resaltan (borde y fondo suaves del color del monto) para encontrarlos de un vistazo.
+  const plata = esDinero(value);
+  const resalte = !plata ? 'border-line bg-surface'
+    : tone === 'ok' ? 'border-ok/30 bg-ok/[0.06]' : tone === 'ko' ? 'border-ko/30 bg-ko/[0.06]' : 'border-accent/30 bg-accent/[0.06]';
   return (
-    <div className="min-w-0 rounded-2xl border border-line bg-surface p-3 sm:p-4">
+    <div data-dinero={plata || undefined} className={cx('min-w-0 rounded-2xl border p-3 sm:p-4', resalte)}>
       <p className="truncate text-[13px] text-muted">{label}</p>
       <p className={cx('num mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl', tone === 'ok' && 'text-ok', tone === 'ko' && 'text-ko', tone === 'accent' && 'text-accent')}>{value}</p>
       {hint && <div className="mt-1 text-xs">{hint}</div>}

@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, CalendarDays, Crown, HandCoins, Home, Settings, TrendingUp, UserRound, Users, Wallet, ArrowLeftRight, type LucideIcon } from 'lucide-react';
+import { BarChart3, Boxes, CalendarDays, Crown, HandCoins, Home, Settings, UserRound, Users, Wallet, ArrowLeftRight, type LucideIcon } from 'lucide-react';
 
 // Mismas secciones, mismo orden y misma visibilidad por rol que la versión estable:
 //  a = solo dueño · o = solo dueño · b = solo barbero · s = todos menos barbero
@@ -13,9 +13,9 @@ export const SECTIONS: Section[] = [
   { id: 'caja', label: 'Movimientos', icon: ArrowLeftRight, vis: 'notBarber', migrated: true },
   { id: 'stk', label: 'Stock', icon: Boxes, vis: 'owner', migrated: true },
   { id: 'est', label: 'Estadísticas', icon: BarChart3, vis: 'owner', migrated: true },
-  { id: 'bar', label: 'Barberos', icon: TrendingUp, vis: 'owner', migrated: true },
+  // Cambio intencional: Barberos + Comisiones se unieron en una sola pestaña, Sueldos.
+  { id: 'sue', label: 'Sueldos', icon: HandCoins, vis: 'owner', migrated: true },
   { id: 'me', label: 'Mi perfil', icon: UserRound, vis: 'barber', migrated: true },
-  { id: 'com', label: 'Comisiones', icon: HandCoins, vis: 'owner', migrated: true },
   { id: 'due', label: 'Dueño', icon: Crown, vis: 'owner', migrated: true },
   // Cambio intencional respecto de la estable: el barbero también tiene Ajustes (su cuenta y sus avisos).
   { id: 'aj', label: 'Ajustes', icon: Settings, vis: 'all', migrated: true },

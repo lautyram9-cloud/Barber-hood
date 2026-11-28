@@ -34,7 +34,7 @@ test('Ajustes: horarios (con validación), barbero con usuario y servicio', asyn
   await cerrar(page);
   await abrir(page, 'Barberos y comisión');
   await page.getByLabel('Nombre del barbero').fill('Tomi');
-  await page.getByLabel('Minutos por turno').fill('40');
+  await page.getByLabel('Minutos por turno', { exact: true }).fill('40');
   await page.getByLabel('Email de su usuario (opcional)').fill('tomi@prueba.test');
   await page.getByRole('button', { name: 'Agregar barbero' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Barbero agregado' })).toBeVisible();
@@ -165,4 +165,39 @@ test('Ajustes: si la base no tiene el espacio de fotos, avisa y no cambia nada',
   await page.getByLabel(`Archivo de foto de ${b.nombre}`).setInputFiles({ name: 'cara.png', mimeType: 'image/png', buffer: Buffer.from(png) });
   await expect(page.getByRole('status').filter({ hasText: 'No se pudo subir la foto' })).toBeVisible();
   expect(log.bodies).toEqual([]);
+});
+
+test('Ajustes: editar minutos por turno y nombre de un barbero, y editar un servicio', async ({ page }) => {
+  const b = DATA.barberos!.filter((x) => x.activo)[0], s = DATA.servicios!.filter((x) => x.activo)[0];
+  const log = await entrar(page, 'aj', { 'PATCH barberos': '', 'PATCH servicios': '' });
+  const hb = await abrir(page, 'Barberos y comisión');
+  await hb.getByLabel(`Minutos por turno de ${b.nombre}`).fill('3');
+  await hb.getByRole('button', { name: 'Guardar datos' }).first().click();
+  await expect(page.getByRole('status').filter({ hasText: 'Los minutos por turno van de 5 a 240' })).toBeVisible();
+  expect(log.bodies).toEqual([]);
+  await hb.getByLabel(`Minutos por turno de ${b.nombre}`).fill('40');
+  await hb.getByLabel(`Nombre de ${b.nombre}`).fill('Lucas Pro');
+  await hb.getByRole('button', { name: 'Guardar datos' }).first().click();
+  await expect(page.getByRole('status').filter({ hasText: 'Datos guardados' })).toBeVisible();
+  expect(log.bodies[0]).toEqual({ op: 'PATCH barberos', body: { nombre: 'Lucas Pro', slot_min: 40 }, query: `?id=eq.${b.id}` });
+  await cerrar(page);
+  const hs = await abrir(page, 'Servicios y comisión');
+  await hs.getByRole('button', { name: `Editar ${s.nombre}`, exact: true }).click();
+  await hs.getByLabel('Precio del servicio').fill('15000');
+  await hs.getByLabel('Duración del servicio').fill('45');
+  await hs.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Servicio guardado' })).toBeVisible();
+  expect(log.bodies[1]).toMatchObject({ op: 'PATCH servicios', body: { nombre: s.nombre, precio: 15000, duracion_min: 45 }, query: `?id=eq.${s.id}` });
+});
+
+test('Sueldos: une Comisiones y Rendimiento en una pestaña, y los montos se ven resaltados', async ({ page }) => {
+  await entrar(page, 'sue', {});
+  await expect(page.getByRole('heading', { name: 'Sueldos', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Por barbero' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Rendimiento' }).click();
+  await expect(page.getByRole('heading', { name: 'Ranking de barberos' })).toBeVisible();
+  const plata = page.locator('main [data-dinero]');
+  await expect(plata.first(), 'cuadros con dinero resaltados').toBeVisible();
+  await expect(plata.first()).toContainText('$');
+  await expect(page.locator('main div:not([data-dinero])', { has: page.getByText('Cortes', { exact: true }) }).last(), 'los que no son dinero quedan normales').toBeVisible();
 });

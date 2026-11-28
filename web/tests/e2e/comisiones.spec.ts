@@ -16,8 +16,10 @@ test('liquidar con confirmación, adelanto y comprobante', async ({ page }) => {
   await page.getByLabel('Email').fill(OWNER.email); await page.getByLabel('Clave').fill('clave-de-prueba');
   await page.getByRole('button', { name: 'Ingresar' }).click();
   await page.locator('main h1').first().waitFor();
-  await page.goto('#/com');
-  await expect(page.getByRole('heading', { name: 'Comisiones', level: 1 })).toBeVisible();
+  await page.goto('#/com'); // el enlace viejo lleva a Sueldos
+  await expect(page.getByRole('heading', { name: 'Sueldos', level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/#\/sue$/);
+  await expect(page.getByRole('tab', { name: 'Comisiones y pagos' })).toHaveAttribute('aria-selected', 'true');
   const b = D.barberos[0], p = C.previaLiquidacion(D, b.id, 'sem', '2026-11-12', '2026-11-12'); // misma fecha fija que el reloj del navegador
   await page.locator('main section', { hasText: 'Por barbero' }).getByRole('button', { name: 'Liquidar' }).first().click();
   const hoja = page.getByRole('dialog', { name: `Liquidar a ${b.nombre}` });

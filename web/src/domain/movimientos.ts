@@ -85,6 +85,23 @@ export function detalleCompleto(d: AppData, m: Movimiento, miUserId: string | nu
   return filas.filter((f) => f[1]);
 }
 
+/**
+ * Ordena servicios y productos por demanda (unidades vendidas en los últimos `dias` días), de más a menos.
+ * Empates y sin ventas: orden alfabético. Los servicios se cuentan por nombre (así se registran) y los productos por id.
+ */
+export function porDemanda<T extends { id: string; nombre: string }>(d: AppData, items: T[], tipo: 'servicio' | 'producto', dias = 90, hoy = today()) {
+  const desde = new Date(hoy + 'T00:00:00'); desde.setDate(desde.getDate() - dias);
+  const lim = desde.toISOString().slice(0, 10);
+  const n = new Map<string, number>();
+  for (const m of d.movs) {
+    if (m.tipo != 'ing' || m.categoria != tipo || m.fecha < lim) continue;
+    const k = tipo == 'producto' ? m.productoId || '' : m.concepto;
+    n.set(k, (n.get(k) ?? 0) + (m.cantidad || 1));
+  }
+  const clave = (x: T) => (tipo == 'producto' ? x.id : x.nombre);
+  return [...items].sort((a, b) => (n.get(clave(b)) ?? 0) - (n.get(clave(a)) ?? 0) || a.nombre.localeCompare(b.nombre));
+}
+
 // ---------- Registro ----------
 interface Ingreso { op: string; tipo: string; concepto: string; precio: number; cantidad: number; servicioId: string; productoId: string; barbero: string; cliente: string; fecha: string; medio: string; clienteId?: string; cobrado: boolean }
 /** Llamada a registrar_ingreso con los mismos parámetros que ingreso() de la versión estable. */
