@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ClipboardList, History, PackagePlus, Share2, ShoppingCart, Trash2, TrendingUp, Truck } from 'lucide-react';
+import { AlertTriangle, ClipboardList, History, PackagePlus, Scale, Share2, ShoppingCart, Trash2, TrendingUp, Truck } from 'lucide-react';
 import type { AppData, Producto } from '@/domain/model';
 import * as L from '@/domain/logic';
 import * as S from '@/domain/stock';
@@ -11,7 +11,7 @@ import { PeriodBar } from '@/components/PeriodBar';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, Card, Empty, Kpi, Row, cx } from '@/components/ui';
 import { Field, Input, Select, Sheet } from '@/components/ui/form';
-import { Plegable } from '@/components/ui/simple';
+import { Destacado, Plegable } from '@/components/ui/simple';
 
 const fmt = L.formatoPesos;
 const TABLAS = ['productos', 'mov_stock', 'proveedores', 'gastos'] as const;
@@ -20,7 +20,7 @@ type Hoja = { t: 'nuevo' } | { t: 'compra'; id?: string } | { t: 'ficha'; id: st
 /** Stock del dueño (V.stk). */
 export function StockPage({ d }: { d: AppData }) {
   const { per, ref } = usePeriod();
-  const [a, b] = L.rango(per, ref), r = S.resumenStock(d, a, b);
+  const [a, b] = L.rango(per, ref), r = S.resumenStock(d, a, b), bal = S.balanceStock(d, a, b);
   const [hoja, setHoja] = useState<Hoja>(null), cerrar = () => setHoja(null);
   const ficha = hoja?.t == 'ficha' ? d.productos.find((p) => p.id == hoja.id) : undefined;
   const fila = (p: Producto, sub?: string) => (
@@ -37,6 +37,23 @@ export function StockPage({ d }: { d: AppData }) {
         </div>
       } />
       <PeriodBar />
+      <Destacado label="Ganancia por ventas de productos" value={fmt(bal.ganancia)} tone={bal.ganancia >= 0 ? 'ok' : 'ko'}
+        hint={bal.unidades ? <>Vendiste {fmt(bal.vendido)} ({bal.unidades} u.) · costo de compra {fmt(bal.costo)} · margen {bal.margenPct}%</> : 'Sin ventas de productos en el período'} />
+      <Plegable title="Balance de ventas" resumen={bal.unidades ? `Después de comisiones: ${fmt(bal.gananciaNeta)} · compras del período ${fmt(bal.compras)}` : `Compras del período ${fmt(bal.compras)}`} icono={<Scale size={18} />}>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <Kpi label="Vendido" value={fmt(bal.vendido)} tone="accent" />
+          <Kpi label="Costo" value={fmt(bal.costo)} tone="ko" />
+          <Kpi label="Ganancia" value={fmt(bal.ganancia)} tone={bal.ganancia >= 0 ? 'ok' : 'ko'} />
+          <Kpi label="Comisiones" value={fmt(bal.comision)} tone="ko" />
+          <Kpi label="Ganancia neta" value={fmt(bal.gananciaNeta)} tone={bal.gananciaNeta >= 0 ? 'ok' : 'ko'} />
+          <Kpi label="Compras" value={fmt(bal.compras)} />
+        </div>
+        <p className="mb-1 text-sm font-semibold">Por producto</p>
+        {bal.filas.length ? bal.filas.map((x) => (
+          <Row key={x.nombre} left={x.nombre} sub={`${x.unidades} u. · vendido ${fmt(x.vendido)} · costo ${fmt(x.costo)}`} right={<span className={x.ganancia >= 0 ? 'text-ok' : 'text-ko'}>{fmt(x.ganancia)}</span>} />
+        )) : <Empty>Sin ventas de productos en el período.</Empty>}
+        <p className="mt-3 text-xs text-subtle">Ganancia = lo vendido menos lo que costó comprar cada unidad. Ganancia neta = ganancia menos comisiones de los barberos por esas ventas. Compras = lo pagado por mercadería en el período (informativo).</p>
+      </Plegable>
       <div className="grid grid-cols-3 gap-3">
         <Kpi label="Valor inventario" value={fmt(r.valorCosto)} />
         <Kpi label="Valor de venta" value={fmt(r.valorVenta)} tone="accent" />

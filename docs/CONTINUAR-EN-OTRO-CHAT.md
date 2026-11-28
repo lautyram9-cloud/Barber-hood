@@ -72,7 +72,7 @@ y reserva pública `#reservar`.
 **Pedido del dueño en 5 partes (en curso):**
 1. HECHO (PR parte 1): pestaña **Sueldos** (= Comisiones + Barberos; `#/bar` y `#/com` redirigen), editar nombre/minutos/usuario
    del barbero y editar servicios, cuadros con dinero resaltados (`Kpi` con `data-dinero`), + ordenado por demanda (90 días).
-2. Balance en Stock: lo vendido y la ganancia (venta − costo de compra). Sin base.
+2. HECHO (PR parte 2): balance en Stock (`balanceStock`): vendido, costo de lo vendido, ganancia, comisiones, ganancia neta y compras del período.
 3. Los cortes del dueño (barbero vinculado a su usuario) sumados automáticamente en la pestaña Dueño. Sin base.
 4. Aviso push los sábados 22:00 (hora Argentina) "¡Es momento de liquidar la semana!": pg_cron + función. SQL a mostrar.
 5. Pago dividido en el + (efectivo + transferencia/tarjeta). SQL a mostrar (la caja suma efectivo por medio_pago).

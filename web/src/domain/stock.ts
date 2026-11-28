@@ -23,6 +23,26 @@ export function resumenStock(d: AppData, a: string, b: string) {
     masVendidos: Object.entries(top).sort((x, y) => y[1] - x[1]).slice(0, 8), movimientos: movs.slice(0, 40),
   };
 }
+/**
+ * Balance de ventas de productos en [a, b]: cuánto se vendió y cuánto se ganó descontando lo que costó
+ * comprar cada unidad (el costo que tenía el producto al momento de la venta). Aparte: comisiones de los
+ * barberos por esas ventas y lo gastado en compras de mercadería en el período.
+ */
+export function balanceStock(d: AppData, a: string, b: string) {
+  const ventas = d.movs.filter((m) => m.tipo == 'ing' && m.categoria == 'producto' && m.fecha >= a && m.fecha <= b);
+  const porProducto = new Map<string, { nombre: string; unidades: number; vendido: number; costo: number; comision: number }>();
+  for (const m of ventas) {
+    const k = m.productoId || m.concepto, u = m.cantidad || 1;
+    const x = porProducto.get(k) ?? { nombre: d.productos.find((p) => p.id == m.productoId)?.nombre || m.concepto, unidades: 0, vendido: 0, costo: 0, comision: 0 };
+    x.unidades += u; x.vendido += +m.monto || 0; x.costo += (m.costoUnit || 0) * u; x.comision += +(m.comisionMonto as number) || 0;
+    porProducto.set(k, x);
+  }
+  const filas = [...porProducto.values()].map((x) => ({ ...x, ganancia: x.vendido - x.costo })).sort((x, y) => y.ganancia - x.ganancia || x.nombre.localeCompare(y.nombre));
+  const suma = (k: 'unidades' | 'vendido' | 'costo' | 'comision' | 'ganancia') => filas.reduce((t, x) => t + x[k], 0);
+  const vendido = suma('vendido'), ganancia = suma('ganancia'), comision = suma('comision');
+  const compras = d.movStock.filter((x) => x.tipo == 'compra' && x.fecha >= a && x.fecha <= b).reduce((t, x) => t + x.cantidad * (x.costoUnit || 0), 0);
+  return { filas, unidades: suma('unidades'), vendido, costo: suma('costo'), ganancia, comision, gananciaNeta: ganancia - comision, margenPct: vendido ? Math.round((ganancia / vendido) * 100) : 0, compras };
+}
 export const detalleMovStock = (d: AppData, x: AppData['movStock'][number]) => [x.tipo, x.proveedor, x.nota, x.barberoId && nombreBarbero(d, x.barberoId)].filter(Boolean).join(' · ');
 export const historialProducto = (d: AppData, p: Producto) => d.movStock.filter((x) => x.productoId == p.id).sort((x, y) => y.ts - x.ts).slice(0, 12);
 export const ventasProducto = (d: AppData, p: Producto) => d.movs.filter((m) => m.tipo == 'ing' && m.productoId == p.id).length;
