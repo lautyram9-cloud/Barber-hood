@@ -48,3 +48,26 @@ test('stock: nuevo producto con stock inicial, compra, ajuste y pérdida', async
   await expect(page.getByRole('status').filter({ hasText: 'Pérdida registrada' })).toBeVisible();
   expect(log.bodies[4]).toEqual({ op: 'rpc registrar_perdida', body: { p_producto: p.id, p_cant: 1, p_motivo: 'roto' } });
 });
+
+test('stock: balance de ventas (vendido, costo y ganancia del período)', async ({ page }) => {
+  await page.clock.setFixedTime(NOW);
+  await mockSupabase(page, DATA, OWNER, NOW, {});
+  await page.goto('');
+  await page.getByLabel('Email').fill(OWNER.email); await page.getByLabel('Clave').fill('clave-de-prueba');
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  await page.locator('main h1').first().waitFor();
+  await page.goto('#/stk');
+  await expect(page.getByRole('heading', { name: 'Stock', level: 1 })).toBeVisible();
+  const L = await import('@/domain/logic');
+  const b = S.balanceStock(D, ...L.rango('sem', '2026-11-12')), fmt = L.formatoPesos;
+  const destacado = page.locator('main div', { has: page.getByText('Ganancia por ventas de productos', { exact: true }) }).last();
+  await expect(destacado).toContainText(fmt(b.ganancia));
+  await page.getByRole('button', { name: 'Balance de ventas', exact: true }).click();
+  const dlg = page.getByRole('dialog', { name: 'Balance de ventas' });
+  const kpi = (l: string) => dlg.locator('div', { has: page.getByText(l, { exact: true }) }).last();
+  await expect(kpi('Vendido')).toContainText(fmt(b.vendido));
+  await expect(kpi('Costo')).toContainText(fmt(b.costo));
+  await expect(kpi('Ganancia')).toContainText(fmt(b.ganancia));
+  await expect(kpi('Compras')).toContainText(fmt(b.compras));
+  if (b.filas.length) await expect(dlg).toContainText(b.filas[0].nombre);
+});
