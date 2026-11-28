@@ -49,6 +49,11 @@ export function detalleMovimiento(d: AppData, m: Movimiento) {
     m.tipo == 'ing' && !m.cobrado ? 'sin cobrar' : '', m.medioPago && m.medioPago != 'efectivo' ? m.medioPago : ''].filter(Boolean).join(' · ');
 }
 
+/** Texto del medio de pago de un movimiento; si el pago fue dividido: "Efectivo + Transferencia". */
+export const textoMedio = (m: Movimiento) => (m.pago2Medio ? `${etiquetaMedio(m.medioPago)} + ${etiquetaMedio(m.pago2Medio)}` : etiquetaMedio(m.medioPago));
+/** Partes del pago: [[medio, monto], …]. Si no es dividido, una sola parte por el total. */
+export const partesPago = (m: Movimiento): [string, number][] =>
+  m.pago2Medio && m.pago2Monto ? [[m.medioPago, m.monto - m.pago2Monto], [m.pago2Medio, m.pago2Monto]] : [[m.medioPago, m.monto]];
 /** Etiqueta legible del medio de pago. */
 export const etiquetaMedio = (medio: string) => MEDIOS.find(([v]) => v == medio)?.[1] ?? (medio ? medio[0].toUpperCase() + medio.slice(1) : 'Efectivo');
 /** Como detalleMovimiento pero sin cobro ni medio de pago: la fila los muestra aparte, con un distintivo. */
@@ -70,7 +75,7 @@ export function detalleCompleto(d: AppData, m: Movimiento, miUserId: string | nu
   const cobro = ing && m.cobrado && m.cobradoAt && m.cobradoAt - m.ts > 60_000 ? cuando(m.cobradoAt) : '';
   const filas: [string, string][] = [
     ['Tipo', ing ? `Ingreso · ${m.categoria}` : `Gasto ${m.categoria}`],
-    ['Medio de pago', ing && !m.cobrado ? `${etiquetaMedio(m.medioPago)} (sin cobrar)` : etiquetaMedio(m.medioPago)],
+    ['Medio de pago', ing && !m.cobrado ? `${etiquetaMedio(m.medioPago)} (sin cobrar)` : m.pago2Medio ? partesPago(m).map(([md, v]) => `${etiquetaMedio(md)} ${formatoPesos(v)}`).join(' + ') : etiquetaMedio(m.medioPago)],
     ['Fecha del movimiento', m.fecha.split('-').reverse().join('/')],
     ['Cargado', cuando(m.ts)],
     ['Cargado por', quienCargo(d, m, miUserId)],
@@ -113,17 +118,41 @@ export function registrarIngreso(db: Db, o: Ingreso) {
   }).then((r: { error: unknown }) => { if (r.error) throw r.error; });
 }
 
-export interface IngresoRapido { tipo: string; concepto: string; monto: string; cantidad: string; productoId: string; cliente: string; barbero: string; fecha: string; medio: string; cobrado: boolean }
+export interface IngresoRapido {
+  tipo: string; concepto: string; monto: string; cantidad: string; productoId: string; cliente: string; barbero: string; fecha: string;
+  /** 'efectivo' | 'transferencia' | 'tarjeta' | 'dividido' (una parte en efectivo y el resto por medio2). */
+  medio: string; cobrado: boolean;
+  /** Pago dividido: cuánto se pagó en efectivo y por dónde vino el resto. */
+  efectivo?: string; medio2?: string;
+}
+/** Total del ingreso rápido (precio × cantidad en productos). */
+export const totalIngresoRapido = (x: IngresoRapido) => (+x.monto || 0) * (x.tipo == 'producto' ? +x.cantidad || 1 : 1);
 /** Validación del botón + (qsave). Ojo: igual que la versión estable, monto vacío cuenta como $0. */
 export function validarIngresoRapido(x: IngresoRapido) {
   const c = x.concepto.trim(), u = +x.monto;
   if (!c || !(u >= 0)) return 'Completá concepto y monto';
   if (x.tipo == 'producto' && !x.productoId) return 'Elegí un producto del stock';
+  if (x.medio == 'dividido') {
+    const t = totalIngresoRapido(x), e = +(x.efectivo ?? '');
+    if (!(t > 0)) return 'Poné el monto total';
+    if (!(e > 0) || e >= t) return 'La parte en efectivo tiene que ser mayor a 0 y menor que el total';
+    if (x.medio2 != 'transferencia' && x.medio2 != 'tarjeta') return 'Elegí por dónde se pagó el resto';
+  }
   return null;
 }
 /** Registra el ingreso del botón +. Devuelve el mensaje a mostrar. El barbero siempre se asigna a sí mismo. */
 export async function guardarIngresoRapido(db: Db, d: AppData, x: IngresoRapido, op: string, me: string | null) {
   const c = x.concepto.trim(), u = +x.monto, k = x.tipo, q = k == 'producto' ? +x.cantidad || 1 : 1, sv = d.servicios.find((s) => s.nombre == c);
+  if (x.medio == 'dividido') {
+    // Un solo ingreso, con la segunda parte del pago (función de la base, todo o nada).
+    const r = await db.rpc('registrar_ingreso_dividido', {
+      p_op: op, p_tipo: k, p_concepto: c, p_servicio: k == 'servicio' && sv ? sv.id : null, p_producto: k == 'producto' ? x.productoId : null, p_cant: q,
+      p_precio: u, p_barbero: (me || x.barbero) || null, p_cliente: x.cliente.trim() || null, p_fecha: x.fecha || today(), p_medio: 'efectivo',
+      p_cliente_id: null, p_medio2: x.medio2, p_monto2: totalIngresoRapido(x) - +(x.efectivo ?? 0),
+    });
+    if (r.error) throw r.error;
+    return 'Ingreso registrado (pago dividido)';
+  }
   await registrarIngreso(db, {
     op, tipo: k, concepto: c, precio: u, cantidad: q, productoId: k == 'producto' ? x.productoId : '', servicioId: k == 'servicio' && sv ? sv.id : '',
     barbero: me || x.barbero, cliente: x.cliente.trim(), fecha: x.fecha, medio: x.medio, cobrado: x.cobrado,

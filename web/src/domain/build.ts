@@ -45,7 +45,7 @@ export function buildAppData(r: RawTables): AppData {
         id: x.id, tipo: 'ing' as const, categoria: x.tipo, concepto: x.concepto, monto: +(x.total as number), cantidad: x.cantidad, barberoId: x.barbero_id || '',
         cliente: x.cliente || '', clienteId: x.cliente_id || '', fecha: x.fecha, costoUnit: +(x.costo_unit ?? 0), comisionMonto: +(x.comision_monto as number),
         liquidacionId: x.liquidacion_id, productoId: x.producto_id, cobrado: x.cobrado !== false, cobradoAt: tm(x.cobrado_at || x.created_at), medioPago: x.medio_pago, ts: tm(x.created_at),
-        creadoPor: x.creado_por, turnoId: x.turno_id,
+        creadoPor: x.creado_por, turnoId: x.turno_id, pago2Medio: x.pago2_medio ?? null, pago2Monto: x.pago2_monto == null ? null : +x.pago2_monto,
       })),
       ...(r.gastos ?? []).map((x) => ({ id: x.id, tipo: 'gas' as const, categoria: x.tipo, concepto: x.concepto, monto: +x.monto, medioPago: x.medio_pago, fecha: x.fecha, ts: tm(x.created_at), creadoPor: x.creado_por })),
     ],

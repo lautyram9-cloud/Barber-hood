@@ -13,7 +13,7 @@ export const sb = createClient(SUPABASE.url, SUPABASE.key);
  */
 export const COLUMNAS: Partial<Record<TableName, string>> = {
   productos: 'id,activo,categoria,comision_pct,nombre,precio,proveedor_id,stock,stock_min',
-  ingresos: 'id,barbero_id,cantidad,cliente,cliente_id,cobrado,cobrado_at,comision_monto,comision_pct,concepto,creado_por,created_at,fecha,liquidacion_id,medio_pago,op_id,precio_unit,producto_id,servicio_id,tipo,total,turno_id',
+  ingresos: 'id,barbero_id,cantidad,cliente,cliente_id,cobrado,cobrado_at,comision_monto,comision_pct,concepto,creado_por,created_at,fecha,liquidacion_id,medio_pago,op_id,precio_unit,producto_id,servicio_id,tipo,total,turno_id,pago2_medio,pago2_monto',
 };
 
 export async function fetchAll<T extends TableName>(table: T, orderBy: string[] = ['id']): Promise<Rows[T][]> {

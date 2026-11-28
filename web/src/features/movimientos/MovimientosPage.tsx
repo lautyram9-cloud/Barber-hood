@@ -71,8 +71,8 @@ function Medio({ m }: { m: Movimiento }) {
   const Icono = pendiente ? Clock : ICONO_MEDIO[m.medioPago] ?? Banknote;
   return (
     <span className={cx('inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
-      pendiente ? 'bg-warn/15 text-warn' : m.medioPago == 'transferencia' ? 'bg-accent/15 text-accent' : m.medioPago == 'tarjeta' ? 'bg-fg/10 text-fg' : 'bg-ok/10 text-ok')}>
-      <Icono size={12} />{pendiente ? 'Sin cobrar' : M.etiquetaMedio(m.medioPago)}
+      pendiente ? 'bg-warn/15 text-warn' : m.pago2Medio ? 'bg-accent/15 text-accent' : m.medioPago == 'transferencia' ? 'bg-accent/15 text-accent' : m.medioPago == 'tarjeta' ? 'bg-fg/10 text-fg' : 'bg-ok/10 text-ok')}>
+      <Icono size={12} />{pendiente ? 'Sin cobrar' : M.textoMedio(m)}
     </span>
   );
 }

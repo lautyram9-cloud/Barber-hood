@@ -75,7 +75,9 @@ y reserva pública `#reservar`.
 2. HECHO (PR parte 2): balance en Stock (`balanceStock`): vendido, costo de lo vendido, ganancia, comisiones, ganancia neta y compras del período.
 3. HECHO (PR parte 3): los cortes del dueño (barbero vinculado a su usuario) se suman solos a sus ingresos privados en Dueño (`cortesDelDueno`, calculado, no se guarda nada).
 4. PREPARADO (PR parte 4): aviso push sábados 22:00 AR "¡Es momento de liquidar la semana!". Desplegar la función notificar-turno actualizada (acción "liquidar") y ejecutar `supabase/etapa14-aviso-liquidar.sql` (pg_cron, `push_recordatorios`, tarea `bh-liquidar-semana` a las 01:00 UTC del domingo). Volver atrás: `select cron.unschedule('bh-liquidar-semana');`.
-5. Pago dividido en el + (efectivo + transferencia/tarjeta). SQL a mostrar (la caja suma efectivo por medio_pago).
+5. PREPARADO (PR parte 5): pago dividido en el + (efectivo + transferencia/tarjeta). Un solo ingreso con `pago2_medio`/`pago2_monto`; `registrar_ingreso_dividido` (usa registrar_ingreso, todo o nada) y `caja_resumen` que cuenta cada parte en su medio. Ejecutar `supabase/etapa15-pago-dividido.sql` ANTES de publicar la app (la app lee las columnas nuevas). Probado en Postgres real (PGlite 0.2.17).
+
+**Aviso:** la versión estable (`/legacy/`) lee las tablas con `select('*')` y desde la etapa 11b no puede leer `productos.costo` ni `ingresos.costo_unit`: probablemente ya no carga. La app nueva no se ve afectada.
 
 - **Fotos de barberos y reserva rediseñada** (etapa 13, sin ejecutar): ejecutar `supabase/etapa13-fotos-barberos.sql`
   (columna `barberos.foto`, espacio de archivos público "barberos" donde solo el dueño sube, y `public_info` con la foto).

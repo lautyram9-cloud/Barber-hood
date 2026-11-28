@@ -162,3 +162,43 @@ test.describe('Movimientos: detalle de cada movimiento', () => {
     expect(log.bodies.at(-1)).toMatchObject({ op: 'rpc anular_ingreso', body: { p_id: objetivo.id } });
   });
 });
+
+test.describe('pago dividido (efectivo + transferencia o tarjeta)', () => {
+  test('botón +: valida y registra UN ingreso con la segunda parte', async ({ page }) => {
+    const log = await entrar(page, OWNER, 'ini', DATA, { 'rpc registrar_ingreso_dividido': 'ing-nuevo' });
+    await page.getByRole('button', { name: 'Registrar ingreso o gasto' }).click();
+    const hoja = page.getByRole('dialog', { name: 'Nuevo ingreso' });
+    const s = D.servicios[0];
+    await hoja.getByRole('button', { name: `${s.nombre} · ${fmt(s.precio)}` }).click();
+    await hoja.getByLabel('Medio de pago').selectOption('dividido');
+    await expect(hoja.getByLabel('Estado del cobro'), 'un pago dividido siempre está cobrado').toHaveCount(0);
+    await hoja.getByLabel('En efectivo').fill(String(s.precio)); // todo en efectivo: no es dividido
+    await hoja.getByRole('button', { name: 'Registrar ingreso' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'La parte en efectivo tiene que ser mayor a 0 y menor que el total' })).toBeVisible();
+    expect(log.bodies).toEqual([]);
+    const efectivo = Math.round(s.precio * 0.6);
+    await hoja.getByLabel('En efectivo').fill(String(efectivo));
+    await hoja.getByLabel('El resto por').selectOption('tarjeta');
+    await expect(hoja).toContainText(`tarjeta ${fmt(s.precio - efectivo)}`);
+    await hoja.getByRole('button', { name: 'Registrar ingreso' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Ingreso registrado (pago dividido)' })).toBeVisible();
+    expect(log.bodies).toEqual([{ op: 'rpc registrar_ingreso_dividido', body: {
+      p_op: expect.stringMatching(UUID), p_tipo: 'servicio', p_concepto: s.nombre, p_servicio: s.id, p_producto: null, p_cant: 1, p_precio: s.precio,
+      p_barbero: null, p_cliente: null, p_fecha: HOY, p_medio: 'efectivo', p_cliente_id: null, p_medio2: 'tarjeta', p_monto2: s.precio - efectivo,
+    } }]);
+    expect(log.rpcs, 'no registra dos ingresos').not.toContain('registrar_ingreso');
+  });
+
+  test('Movimientos: el pago dividido se ve en la fila y en el detalle', async ({ page }) => {
+    const [a, b] = L.rango('sem', HOY);
+    const obj = M.movimientosPeriodo(D, a, b).find((m) => m.tipo == 'ing' && m.cobrado && m.monto > 1000)!;
+    const datos = { ...DATA, ingresos: DATA.ingresos!.map((i) => (i.id == obj.id ? { ...i, medio_pago: 'efectivo', pago2_medio: 'transferencia', pago2_monto: 1000 } : i)) };
+    await entrar(page, OWNER, 'caja', datos);
+    const fila = page.getByRole('button', { name: /Ver detalle de/ }).filter({ hasText: 'Efectivo + Transferencia' });
+    await expect(fila).toHaveCount(1);
+    await fila.click();
+    const dlg = page.getByRole('dialog');
+    const medio = dlg.locator('dt', { hasText: /^Medio de pago$/ }).locator('xpath=following-sibling::dd');
+    await expect(medio).toHaveText(`Efectivo ${fmt(obj.monto - 1000)} + Transferencia ${fmt(1000)}`);
+  });
+});

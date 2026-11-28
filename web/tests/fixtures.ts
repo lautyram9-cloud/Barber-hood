@@ -66,7 +66,7 @@ export function fixtures(seed: number, nowIso: string): RawTables {
       cobrado, cobrado_at: cobrado && r() < 0.7 ? `${day(-int(0, 3))}T1${int(0, 9)}:00:00-03:00` : null, comision_monto: r() < 0.1 ? null : num(int(1, 6) * 1000),
       comision_pct: num(40), concepto: prod ? p.nombre : s.nombre, costo_unit: num(prod ? 4000 : 0), creado_por: null, created_at: created, fecha: f,
       liquidacion_id: r() < 0.2 && liquidaciones.length ? pick(liquidaciones).id : null, medio_pago: pick(['efectivo', 'transferencia', 'tarjeta']), op_id: uid('op', i),
-      precio_unit: num(precio), producto_id: prod ? p.id : null, servicio_id: prod ? null : s.id, tipo: prod ? 'producto' : 'servicio', total: r() < 0.03 ? null : num(precio * cant), turno_id: null,
+      precio_unit: num(precio), producto_id: prod ? p.id : null, servicio_id: prod ? null : s.id, tipo: prod ? 'producto' : 'servicio', total: r() < 0.03 ? null : num(precio * cant), turno_id: null, pago2_medio: null, pago2_monto: null,
     };
   });
   const gastos = Array.from({ length: int(5, 20) }, (_, i) => ({ id: uid('gas', i), concepto: pick(['Alquiler', 'Luz', 'Insumos']), creado_por: null, created_at: `${day(-i)}T10:00:00Z`, fecha: i < 2 ? day(0) : day(-int(0, 400)), medio_pago: 'efectivo', monto: num(int(1, 50) * 1000), tipo: i == 0 ? 'fijo' : pick(['fijo', 'variable']) }));
